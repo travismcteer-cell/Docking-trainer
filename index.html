@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Docking Trainer MVP v8</title>
+<title>Docking Trainer MVP v9</title>
 <style>
 :root{--water:#b9dde5;--ink:#17333a;--dock:#8b6a47;--panel:#fff}
 *{box-sizing:border-box}
@@ -222,7 +222,7 @@ input[type=range]{width:100%}
     const thrustDirY=fwdy*Math.cos(steerRad)+righty*Math.sin(steerRad);
 
     // Arbitrary simulator units, tuned for low-speed docking.
-    const thrust=0.04;
+    const thrust=0.065;
 
     // Longitudinal locations are fractions of boat length relative to midships.
     // -0.50 = transom, +0.50 = bow.
@@ -269,12 +269,20 @@ input[type=range]{width:100%}
     const vl=state.vx*rightx+state.vy*righty;
 
     // Hydrodynamic resistance acts primarily around an aft centre of resistance.
-    // Lateral resistance remains much stronger than fore/aft resistance.
-    const forwardDrag=0.10;
-    const lateralDrag=0.80;
+    // Use a small linear term plus quadratic drag. This lets a heavy cruiser
+    // carry momentum at low speed without allowing unlimited acceleration.
+    const forwardLinearDrag=0.025;
+    const forwardQuadraticDrag=0.18;
+    const lateralLinearDrag=0.35;
+    const lateralQuadraticDrag=0.70;
 
-    const waterDragX=-(vf*fwdx*forwardDrag + vl*rightx*lateralDrag);
-    const waterDragY=-(vf*fwdy*forwardDrag + vl*righty*lateralDrag);
+    const forwardResistance =
+      forwardLinearDrag*vf + forwardQuadraticDrag*vf*Math.abs(vf);
+    const lateralResistance =
+      lateralLinearDrag*vl + lateralQuadraticDrag*vl*Math.abs(vl);
+
+    const waterDragX=-(forwardResistance*fwdx + lateralResistance*rightx);
+    const waterDragY=-(forwardResistance*fwdy + lateralResistance*righty);
     addForce(waterDragX,waterDragY,WATER_COR_X,0);
 
     // Environment.
@@ -294,7 +302,7 @@ input[type=range]{width:100%}
     addForce(currentForceX,currentForceY,WATER_COR_X,0);
 
     // Rotational damping is intentionally modest so a heavy cruiser carries yaw momentum.
-    state.omega *= Math.exp(-0.85*dt);
+    state.omega *= Math.exp(-0.55*dt);
 
     state.x += state.vx*dt;
     state.y += state.vy*dt;
