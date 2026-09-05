@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Docking Trainer MVP v3</title>
+<title>Docking Trainer MVP v4</title>
 <style>
 :root{--water:#b9dde5;--ink:#17333a;--dock:#8b6a47;--panel:#fff}
 *{box-sizing:border-box}
@@ -109,10 +109,10 @@ input[type=range]{width:100%}
 
   <div class="card">
     <div class="label">Environment</div>
-    <div class="small">Wind <span id="windVal">6 kt</span></div>
-    <input id="wind" type="range" min="0" max="20" value="6">
-    <div class="small">Current <span id="curVal">0.5 kt</span></div>
-    <input id="cur" type="range" min="0" max="3" value="0.5" step=".1">
+    <div class="small">Wind <span id="windVal">0 kt</span></div>
+    <input id="wind" type="range" min="0" max="20" value="0">
+    <div class="small">Current <span id="curVal">0.0 kt</span></div>
+    <input id="cur" type="range" min="0" max="3" value="0" step=".1">
   </div>
 
   <div class="card"><div class="row"><button id="reset">Reset</button><button id="approach">New Approach</button></div></div>
@@ -139,6 +139,7 @@ input[type=range]{width:100%}
     if(Math.abs(v)<2) return 'Neutral';
     return (v>0?'Ahead ':'Reverse ')+Math.abs(v)+'%';
   }
+
   function setThrottle(which,v){
     v=+v;
     if(Math.abs(v)<2) v=0;
@@ -151,6 +152,7 @@ input[type=range]{width:100%}
       document.getElementById('stbdVal').textContent=engineText(v);
     }
   }
+
   portThrottle.oninput=e=>setThrottle('port',e.target.value);
   stbdThrottle.oninput=e=>setThrottle('stbd',e.target.value);
   document.getElementById('portNeutral').onclick=()=>setThrottle('port',0);
@@ -160,16 +162,21 @@ input[type=range]{width:100%}
     state.steer=+v;
     steer.value=v;
     document.getElementById('steerVal').textContent=(v>0?'+':'')+v+'°';
-    driveP.style.transform='rotate('+v+'deg)';
-    driveS.style.transform='rotate('+v+'deg)';
+
+    // The little red drive graphics extend aft (to the left in the boat's
+    // unrotated coordinate system), so their visual rotation must be the
+    // opposite sign of the thrust-vector steering angle.
+    driveP.style.transform='rotate('+(-v)+'deg)';
+    driveS.style.transform='rotate('+(-v)+'deg)';
   }
+
   steer.oninput=e=>updateSteer(e.target.value);
   document.getElementById('portLock').onclick=()=>updateSteer(-35);
   document.getElementById('stbdLock').onclick=()=>updateSteer(35);
   document.getElementById('center').onclick=()=>updateSteer(0);
 
   document.getElementById('wind').oninput=e=>document.getElementById('windVal').textContent=e.target.value+' kt';
-  document.getElementById('cur').oninput=e=>document.getElementById('curVal').textContent=e.target.value+' kt';
+  document.getElementById('cur').oninput=e=>document.getElementById('curVal').textContent=(+e.target.value).toFixed(1)+' kt';
 
   function reset(){
     state={x:.43,y:.69,a:-90,vx:0,vy:0,omega:0,port:0,stbd:0,steer:0};
@@ -177,47 +184,61 @@ input[type=range]{width:100%}
     setThrottle('port',0);
     setThrottle('stbd',0);
   }
+
   document.getElementById('reset').onclick=reset;
   document.getElementById('approach').onclick=()=>{
-    reset(); state.x=.25+Math.random()*.28; state.y=.58+Math.random()*.18; state.a=-110+Math.random()*40;
+    reset();
+    state.x=.25+Math.random()*.28;
+    state.y=.58+Math.random()*.18;
+    state.a=-110+Math.random()*40;
   };
 
   function physics(dt){
     const r=water.getBoundingClientRect();
     if(!r.width || !r.height) return;
+
     const ang=state.a*Math.PI/180;
     const sa=(state.a+state.steer)*Math.PI/180;
     const fx=Math.cos(sa), fy=Math.sin(sa);
     const rightx=-Math.sin(ang), righty=Math.cos(ang);
     const fwdx=Math.cos(ang), fwdy=Math.sin(ang);
 
-    const thrust=0.000055;
+    // Calibrated for obvious but still low-speed docking movement on a phone.
+    const thrust=0.012;
     const spacing=0.000035;
+
     function engineForce(setting,side){
       if(!setting)return;
+
+      // Reverse is slightly less effective than forward.
       let T=thrust*setting*(setting<0?.9:1);
+
       state.vx += fx*T*dt;
       state.vy += fy*T*dt;
+
+      // Apply each engine's thrust aft and offset from centreline to create yaw.
       const rx=-0.00006*fwdx+side*spacing*rightx;
       const ry=-0.00006*fwdy+side*spacing*righty;
       state.omega += (rx*fy-ry*fx)*T*dt*15000000;
     }
+
     engineForce(state.port,-1);
     engineForce(state.stbd,1);
 
-    // Hull drag, with greater resistance sideways
+    // Hull drag: much more resistance to sideways motion than fore/aft motion.
     const vf=state.vx*fwdx+state.vy*fwdy;
     const vl=state.vx*rightx+state.vy*righty;
     state.vx -= (vf*fwdx*.8 + vl*rightx*2.1)*dt;
     state.vy -= (vf*fwdy*.8 + vl*righty*2.1)*dt;
 
-    // Simple wind/current
+    // Simple environment model. Defaults are zero for calibration/testing.
     const wind=+document.getElementById('wind').value;
     const cur=+document.getElementById('cur').value;
     state.vx += wind*0.0000012*dt;
     state.vy += cur*0.000004*dt;
 
     state.omega *= Math.exp(-2.2*dt);
+
     state.x += state.vx*dt;
     state.y += state.vy*dt;
     state.a += state.omega*dt;
@@ -230,20 +251,27 @@ input[type=range]{width:100%}
     boat.style.left=(state.x*100)+'%';
     boat.style.top=(state.y*100)+'%';
     boat.style.transform='translate(-50%,-50%) rotate('+state.a+'deg)';
-    const speed=Math.sqrt(state.vx*state.vx+state.vy*state.vy)*5000;
-    const p = Math.round(Math.abs(state.port)*100);
-    const s = Math.round(Math.abs(state.stbd)*100);
-    const pt = state.port>0?'A'+p:state.port<0?'R'+p:'N';
-    const st = state.stbd>0?'A'+s:state.stbd<0?'R'+s:'N';
+
+    const speed=Math.sqrt(state.vx*state.vx+state.vy*state.vy)*250;
+    const p=Math.round(Math.abs(state.port)*100);
+    const s=Math.round(Math.abs(state.stbd)*100);
+    const pt=state.port>0?'A'+p:state.port<0?'R'+p:'N';
+    const st=state.stbd>0?'A'+s:state.stbd<0?'R'+s:'N';
+
     status.textContent=speed.toFixed(1)+' kt · P '+pt+' / S '+st;
   }
 
   function loop(now){
-    let dt=Math.min((now-last)/1000,.03); last=now;
-    physics(dt); render();
+    let dt=Math.min((now-last)/1000,.03);
+    last=now;
+    physics(dt);
+    render();
     requestAnimationFrame(loop);
   }
-  updateSteer(0); render(); requestAnimationFrame(loop);
+
+  updateSteer(0);
+  render();
+  requestAnimationFrame(loop);
 })();
 </script>
 </body>
