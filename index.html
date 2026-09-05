@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Docking Trainer MVP v11</title>
+<title>Docking Trainer MVP v12</title>
 <style>
 :root{--water:#b9dde5;--ink:#17333a;--dock:#8b6a47;--panel:#fff}
 *{box-sizing:border-box}
@@ -218,10 +218,18 @@ input[type=range]{width:100%}
     const fwdx=Math.cos(ang), fwdy=Math.sin(ang);
     const rightx=-Math.sin(ang), righty=Math.cos(ang);
 
-    // Sterndrive thrust direction is explicitly rotated with the drives.
-    // Positive steering = starboard.
-    const thrustDirX=fwdx*Math.cos(steerRad)+rightx*Math.sin(steerRad);
-    const thrustDirY=fwdy*Math.cos(steerRad)+righty*Math.sin(steerRad);
+    // The visible sterndrive points AFT. In ahead gear, the propeller pushes
+    // water along that aft-pointing drive axis and the reaction force on the
+    // BOAT is exactly opposite it.
+    //
+    // Example: aft end of drive points PORT -> water is accelerated aft/port ->
+    // reaction force on stern is forward/STARBOARD -> stern moves starboard
+    // and the bow yaws PORT around the hull's centre of resistance.
+    //
+    // Therefore the force-on-boat steering sign is opposite the visible
+    // aft-end sterndrive angle.
+    const thrustDirX=fwdx*Math.cos(steerRad)-rightx*Math.sin(steerRad);
+    const thrustDirY=fwdy*Math.cos(steerRad)-righty*Math.sin(steerRad);
 
     // Arbitrary simulator units, tuned for low-speed docking.
     const thrust=0.065;
