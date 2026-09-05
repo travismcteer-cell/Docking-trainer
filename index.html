@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Docking Trainer MVP v7</title>
+<title>Docking Trainer MVP v8</title>
 <style>
 :root{--water:#b9dde5;--ink:#17333a;--dock:#8b6a47;--panel:#fff}
 *{box-sizing:border-box}
@@ -105,6 +105,10 @@ input[type=range]{width:100%}
       </div>
     </div>
     <div class="small" style="margin-top:8px">Center = neutral. Up = ahead. Down = reverse. Use short partial-throttle blips for docking.</div>
+    <div class="row" style="margin-top:8px">
+      <button id="testAhead">Test: Both Ahead 50%</button>
+      <button id="testNeutral">Test: Both Neutral</button>
+    </div>
   </div>
 
   <div class="card">
@@ -157,6 +161,14 @@ input[type=range]{width:100%}
   stbdThrottle.oninput=e=>setThrottle('stbd',e.target.value);
   document.getElementById('portNeutral').onclick=()=>setThrottle('port',0);
   document.getElementById('stbdNeutral').onclick=()=>setThrottle('stbd',0);
+  document.getElementById('testAhead').onclick=()=>{
+    setThrottle('port',50);
+    setThrottle('stbd',50);
+  };
+  document.getElementById('testNeutral').onclick=()=>{
+    setThrottle('port',0);
+    setThrottle('stbd',0);
+  };
 
   function updateSteer(v){
     state.steer=+v;
@@ -210,7 +222,7 @@ input[type=range]{width:100%}
     const thrustDirY=fwdy*Math.cos(steerRad)+righty*Math.sin(steerRad);
 
     // Arbitrary simulator units, tuned for low-speed docking.
-    const thrust=0.0008;
+    const thrust=0.04;
 
     // Longitudinal locations are fractions of boat length relative to midships.
     // -0.50 = transom, +0.50 = bow.
@@ -303,7 +315,8 @@ input[type=range]{width:100%}
     const pt=state.port>0?'A'+p:state.port<0?'R'+p:'N';
     const st=state.stbd>0?'A'+s:state.stbd<0?'R'+s:'N';
 
-    status.textContent=speed.toFixed(1)+' kt · P '+pt+' / S '+st;
+    status.textContent=speed.toFixed(1)+' kt · P '+pt+' / S '+st+
+      ' · vx '+state.vx.toFixed(3)+' vy '+state.vy.toFixed(3);
   }
 
   function loop(now){
