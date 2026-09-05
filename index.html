@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Docking Trainer MVP v5</title>
+<title>Docking Trainer MVP v6</title>
 <style>
 :root{--water:#b9dde5;--ink:#17333a;--dock:#8b6a47;--panel:#fff}
 *{box-sizing:border-box}
@@ -198,47 +198,90 @@ input[type=range]{width:100%}
     if(!r.width || !r.height) return;
 
     const ang=state.a*Math.PI/180;
-    const sa=(state.a+state.steer)*Math.PI/180;
-    const fx=Math.cos(sa), fy=Math.sin(sa);
-    const rightx=-Math.sin(ang), righty=Math.cos(ang);
-    const fwdx=Math.cos(ang), fwdy=Math.sin(ang);
+    const steerRad=state.steer*Math.PI/180;
 
-    // Calibrated for obvious but still low-speed docking movement on a phone.
+    // Boat-fixed unit vectors in world coordinates.
+    const fwdx=Math.cos(ang), fwdy=Math.sin(ang);
+    const rightx=-Math.sin(ang), righty=Math.cos(ang);
+
+    // Sterndrive thrust direction is explicitly rotated with the drives.
+    // Positive steering = starboard.
+    const thrustDirX=fwdx*Math.cos(steerRad)+rightx*Math.sin(steerRad);
+    const thrustDirY=fwdy*Math.cos(steerRad)+righty*Math.sin(steerRad);
+
+    // Arbitrary simulator units, tuned for low-speed docking.
     const thrust=0.000055;
-    const spacing=0.000035;
+
+    // Longitudinal locations are fractions of boat length relative to midships.
+    // -0.50 = transom, +0.50 = bow.
+    const DRIVE_X=-0.46;
+    const WATER_COR_X=-0.21;  // ~1/4–1/3 boat length forward of transom
+    const AIR_COE_X= 0.09;    // a few feet forward of midships on a 31-footer
+    const ENGINE_Y=0.16;      // port/starboard offset from centreline
+
+    // Converts our normalized force/lever units into visible yaw acceleration.
+    const yawScale=1850;
+
+    function addForce(Fx,Fy,xBody=0,yBody=0){
+      state.vx += Fx*dt;
+      state.vy += Fy*dt;
+
+      // Convert the body-fixed application point to world coordinates.
+      const rx=xBody*fwdx+yBody*rightx;
+      const ry=xBody*fwdy+yBody*righty;
+
+      // 2-D moment r x F. state.omega is in degrees/sec.
+      state.omega += (rx*Fy-ry*Fx)*yawScale*dt;
+    }
 
     function engineForce(setting,side){
-      if(!setting)return;
+      if(!setting) return;
 
-      // Reverse is slightly less effective than forward.
-      let T=thrust*setting*(setting<0?.9:1);
+      // Bravo 3 reverse is modeled as slightly less effective than ahead.
+      const T=thrust*setting*(setting<0 ? .9 : 1);
 
-      state.vx += fx*T*dt;
-      state.vy += fy*T*dt;
-
-      // Apply each engine's thrust aft and offset from centreline to create yaw.
-      const rx=-0.00006*fwdx+side*spacing*rightx;
-      const ry=-0.00006*fwdy+side*spacing*righty;
-      state.omega += (rx*fy-ry*fx)*T*dt*15000000;
+      // side: port=-1, starboard=+1
+      addForce(
+        thrustDirX*T,
+        thrustDirY*T,
+        DRIVE_X,
+        side*ENGINE_Y
+      );
     }
 
     engineForce(state.port,-1);
     engineForce(state.stbd,1);
 
-    // Hull drag: much more resistance to sideways motion than fore/aft motion.
+    // Resolve boat velocity into fore/aft and lateral components.
     const vf=state.vx*fwdx+state.vy*fwdy;
     const vl=state.vx*rightx+state.vy*righty;
-    const forwardDrag = 0.10;
-    const lateralDrag = 0.80;
-    state.vx -= (vf*fwdx*forwardDrag + vl*rightx*lateralDrag)*dt;
-    state.vy -= (vf*fwdy*forwardDrag + vl*righty*lateralDrag)*dt;
 
-    // Simple environment model. Defaults are zero for calibration/testing.
+    // Hydrodynamic resistance acts primarily around an aft centre of resistance.
+    // Lateral resistance remains much stronger than fore/aft resistance.
+    const forwardDrag=0.10;
+    const lateralDrag=0.80;
+
+    const waterDragX=-(vf*fwdx*forwardDrag + vl*rightx*lateralDrag);
+    const waterDragY=-(vf*fwdy*forwardDrag + vl*righty*lateralDrag);
+    addForce(waterDragX,waterDragY,WATER_COR_X,0);
+
+    // Environment.
     const wind=+document.getElementById('wind').value;
     const cur=+document.getElementById('cur').value;
-    state.vx += wind*0.0000012*dt;
-    state.vy += cur*0.000004*dt;
 
+    // Wind is currently shown blowing left-to-right on screen.
+    // Crucially, it acts forward of midships, while underwater resistance acts aft.
+    // This creates the weathercock tendency: when drifting, the bow falls downwind.
+    const windForceX=wind*0.0000012;
+    const windForceY=0;
+    addForce(windForceX,windForceY,AIR_COE_X,0);
+
+    // Current acts on the underwater body near the hydrodynamic centre of resistance.
+    const currentForceX=0;
+    const currentForceY=cur*0.000004;
+    addForce(currentForceX,currentForceY,WATER_COR_X,0);
+
+    // Rotational damping is intentionally modest so a heavy cruiser carries yaw momentum.
     state.omega *= Math.exp(-0.85*dt);
 
     state.x += state.vx*dt;
