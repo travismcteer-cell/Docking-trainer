@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Docking Trainer MVP v4</title>
+<title>Docking Trainer MVP v5</title>
 <style>
 :root{--water:#b9dde5;--ink:#17333a;--dock:#8b6a47;--panel:#fff}
 *{box-sizing:border-box}
@@ -204,7 +204,7 @@ input[type=range]{width:100%}
     const fwdx=Math.cos(ang), fwdy=Math.sin(ang);
 
     // Calibrated for obvious but still low-speed docking movement on a phone.
-    const thrust=0.012;
+    const thrust=0.000055;
     const spacing=0.000035;
 
     function engineForce(setting,side){
@@ -228,8 +228,10 @@ input[type=range]{width:100%}
     // Hull drag: much more resistance to sideways motion than fore/aft motion.
     const vf=state.vx*fwdx+state.vy*fwdy;
     const vl=state.vx*rightx+state.vy*righty;
-    state.vx -= (vf*fwdx*.8 + vl*rightx*2.1)*dt;
-    state.vy -= (vf*fwdy*.8 + vl*righty*2.1)*dt;
+    const forwardDrag = 0.10;
+    const lateralDrag = 0.80;
+    state.vx -= (vf*fwdx*forwardDrag + vl*rightx*lateralDrag)*dt;
+    state.vy -= (vf*fwdy*forwardDrag + vl*righty*lateralDrag)*dt;
 
     // Simple environment model. Defaults are zero for calibration/testing.
     const wind=+document.getElementById('wind').value;
@@ -237,7 +239,7 @@ input[type=range]{width:100%}
     state.vx += wind*0.0000012*dt;
     state.vy += cur*0.000004*dt;
 
-    state.omega *= Math.exp(-2.2*dt);
+    state.omega *= Math.exp(-0.85*dt);
 
     state.x += state.vx*dt;
     state.y += state.vy*dt;
