@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Docking Trainer MVP v3</title>
+<style>
+:root{--water:#b9dde5;--ink:#17333a;--dock:#8b6a47;--panel:#fff}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);background:#eef5f6}
+#app{display:grid;grid-template-rows:auto 430px auto;min-height:100vh}
+header{padding:10px 14px;background:#fff;border-bottom:1px solid #ccd;display:flex;justify-content:space-between;gap:10px;align-items:center}
+#water{position:relative;overflow:hidden;background:
+ linear-gradient(rgba(255,255,255,.22) 1px,transparent 1px),
+ linear-gradient(90deg,rgba(255,255,255,.22) 1px,transparent 1px),
+ var(--water);
+ background-size:40px 40px;
+ min-height:430px}
+#dockA,#dockB,#dockC{position:absolute;background:var(--dock);border:3px solid #5f472f}
+#dockA{left:72%;top:15%;width:24px;height:68%}
+#dockB{left:91%;top:15%;width:24px;height:68%}
+#dockC{left:72%;top:77%;width:calc(19% + 24px);height:26px}
+#slipLabel{position:absolute;left:79%;top:70%;font-weight:800;opacity:.7}
+#boatWrap{position:absolute;left:43%;top:69%;width:92px;height:38px;transform:translate(-50%,-50%) rotate(-90deg);transform-origin:center}
+#boat{
+ position:absolute;inset:0;
+ background:#fafafa;border:2px solid var(--ink);
+ clip-path:polygon(100% 50%,82% 100%,0 100%,0 0,82% 0);
+}
+#cabin{position:absolute;left:31px;top:7px;width:35px;height:24px;background:#78939a;border-radius:3px}
+.drive{position:absolute;left:-10px;width:17px;height:4px;background:#c23b22;transform-origin:right center}
+#driveP{top:7px} #driveS{bottom:7px}
+#boatLabel{position:absolute;left:38%;top:58%;font-size:12px;font-weight:800}
+.arrow{position:absolute;font-size:11px;font-weight:700}
+#windArrow{left:18px;top:18px}
+#currentArrow{left:18px;top:60px}
+#controls{padding:10px;display:grid;gap:10px;background:#f8fbfb;border-top:1px solid #ccd}
+.card{background:#fff;border:1px solid #d7e0e2;border-radius:12px;padding:10px}
+.label{font-size:12px;font-weight:800;margin-bottom:6px}
+.small{font-size:11px;opacity:.75}
+.row,.throttles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stack{display:grid;gap:6px}
+button{border:1px solid #b8c8cc;background:#f7fbfc;border-radius:10px;padding:11px 8px;font-weight:700;color:var(--ink)}
+button.active{background:#d6edf2}
+input[type=range]{width:100%}
+.engineSlider{
+  writing-mode:vertical-lr;
+  direction:rtl;
+  width:46px;
+  height:180px;
+  margin:8px auto;
+  display:block;
+}
+.engineSlider::-webkit-slider-thumb{width:28px;height:28px}
+@media(min-width:900px){
+ #app{grid-template-columns:1fr 330px;grid-template-rows:auto 1fr;height:100vh}
+ header{grid-column:1/-1}
+ #water{grid-column:1;grid-row:2;height:100%}
+ #controls{grid-column:2;grid-row:2;overflow:auto;border-left:1px solid #ccd;border-top:0}
+}
+</style>
+</head>
+<body>
+<div id="app">
+<header><strong>Docking Trainer — Twin Sterndrive MVP</strong><span id="status">Ready</span></header>
+
+<div id="water">
+  <div id="dockA"></div><div id="dockB"></div><div id="dockC"></div>
+  <div id="slipLabel">SLIP</div>
+  <div id="windArrow">WIND →</div>
+  <div id="currentArrow">CURRENT ↓</div>
+
+  <div id="boatWrap">
+    <div id="boat"></div>
+    <div id="cabin"></div>
+    <div class="drive" id="driveP"></div>
+    <div class="drive" id="driveS"></div>
+  </div>
+  <div id="boatLabel">BOAT</div>
+</div>
+
+<div id="controls">
+  <div class="card">
+    <div class="label">Steering</div>
+    <input id="steer" type="range" min="-35" max="35" value="0">
+    <div class="small">Port ← <span id="steerVal">0°</span> → Starboard</div>
+    <div class="row" style="margin-top:8px">
+      <button id="portLock">Full Port</button><button id="stbdLock">Full Starboard</button>
+    </div>
+    <button id="center" style="width:100%;margin-top:6px">Center Drives</button>
+  </div>
+
+  <div class="card">
+    <div class="label">Throttle / Shift</div>
+    <div class="throttles">
+      <div class="stack">
+        <div class="small"><b>PORT</b> · <span id="portVal">Neutral</span></div>
+        <input id="portThrottle" class="engineSlider" type="range" min="-100" max="100" value="0" step="1">
+        <button id="portNeutral">Neutral</button>
+      </div>
+      <div class="stack">
+        <div class="small"><b>STARBOARD</b> · <span id="stbdVal">Neutral</span></div>
+        <input id="stbdThrottle" class="engineSlider" type="range" min="-100" max="100" value="0" step="1">
+        <button id="stbdNeutral">Neutral</button>
+      </div>
+    </div>
+    <div class="small" style="margin-top:8px">Center = neutral. Up = ahead. Down = reverse. Use short partial-throttle blips for docking.</div>
+  </div>
+
+  <div class="card">
+    <div class="label">Environment</div>
+    <div class="small">Wind <span id="windVal">6 kt</span></div>
+    <input id="wind" type="range" min="0" max="20" value="6">
+    <div class="small">Current <span id="curVal">0.5 kt</span></div>
+    <input id="cur" type="range" min="0" max="3" value="0.5" step=".1">
+  </div>
+
+  <div class="card"><div class="row"><button id="reset">Reset</button><button id="approach">New Approach</button></div></div>
+</div>
+</div>
+
+<script>
+(function(){
+  const water=document.getElementById('water');
+  const boat=document.getElementById('boatWrap');
+  const driveP=document.getElementById('driveP');
+  const driveS=document.getElementById('driveS');
+  const status=document.getElementById('status');
+  const steer=document.getElementById('steer');
+
+  let state={x:.43,y:.69,a:-90,vx:0,vy:0,omega:0,port:0,stbd:0,steer:0};
+  let last=performance.now();
+
+  const portThrottle=document.getElementById('portThrottle');
+  const stbdThrottle=document.getElementById('stbdThrottle');
+
+  function engineText(v){
+    v=+v;
+    if(Math.abs(v)<2) return 'Neutral';
+    return (v>0?'Ahead ':'Reverse ')+Math.abs(v)+'%';
+  }
+  function setThrottle(which,v){
+    v=+v;
+    if(Math.abs(v)<2) v=0;
+    state[which]=v/100;
+    if(which==='port'){
+      portThrottle.value=v;
+      document.getElementById('portVal').textContent=engineText(v);
+    } else {
+      stbdThrottle.value=v;
+      document.getElementById('stbdVal').textContent=engineText(v);
+    }
+  }
+  portThrottle.oninput=e=>setThrottle('port',e.target.value);
+  stbdThrottle.oninput=e=>setThrottle('stbd',e.target.value);
+  document.getElementById('portNeutral').onclick=()=>setThrottle('port',0);
+  document.getElementById('stbdNeutral').onclick=()=>setThrottle('stbd',0);
+
+  function updateSteer(v){
+    state.steer=+v;
+    steer.value=v;
+    document.getElementById('steerVal').textContent=(v>0?'+':'')+v+'°';
+    driveP.style.transform='rotate('+v+'deg)';
+    driveS.style.transform='rotate('+v+'deg)';
+  }
+  steer.oninput=e=>updateSteer(e.target.value);
+  document.getElementById('portLock').onclick=()=>updateSteer(-35);
+  document.getElementById('stbdLock').onclick=()=>updateSteer(35);
+  document.getElementById('center').onclick=()=>updateSteer(0);
+
+  document.getElementById('wind').oninput=e=>document.getElementById('windVal').textContent=e.target.value+' kt';
+  document.getElementById('cur').oninput=e=>document.getElementById('curVal').textContent=e.target.value+' kt';
+
+  function reset(){
+    state={x:.43,y:.69,a:-90,vx:0,vy:0,omega:0,port:0,stbd:0,steer:0};
+    updateSteer(0);
+    setThrottle('port',0);
+    setThrottle('stbd',0);
+  }
+  document.getElementById('reset').onclick=reset;
+  document.getElementById('approach').onclick=()=>{
+    reset(); state.x=.25+Math.random()*.28; state.y=.58+Math.random()*.18; state.a=-110+Math.random()*40;
+  };
+
+  function physics(dt){
+    const r=water.getBoundingClientRect();
+    if(!r.width || !r.height) return;
+    const ang=state.a*Math.PI/180;
+    const sa=(state.a+state.steer)*Math.PI/180;
+    const fx=Math.cos(sa), fy=Math.sin(sa);
+    const rightx=-Math.sin(ang), righty=Math.cos(ang);
+    const fwdx=Math.cos(ang), fwdy=Math.sin(ang);
+
+    const thrust=0.000055;
+    const spacing=0.000035;
+    function engineForce(setting,side){
+      if(!setting)return;
+      let T=thrust*setting*(setting<0?.9:1);
+      state.vx += fx*T*dt;
+      state.vy += fy*T*dt;
+      const rx=-0.00006*fwdx+side*spacing*rightx;
+      const ry=-0.00006*fwdy+side*spacing*righty;
+      state.omega += (rx*fy-ry*fx)*T*dt*15000000;
+    }
+    engineForce(state.port,-1);
+    engineForce(state.stbd,1);
+
+    // Hull drag, with greater resistance sideways
+    const vf=state.vx*fwdx+state.vy*fwdy;
+    const vl=state.vx*rightx+state.vy*righty;
+    state.vx -= (vf*fwdx*.8 + vl*rightx*2.1)*dt;
+    state.vy -= (vf*fwdy*.8 + vl*righty*2.1)*dt;
+
+    // Simple wind/current
+    const wind=+document.getElementById('wind').value;
+    const cur=+document.getElementById('cur').value;
+    state.vx += wind*0.0000012*dt;
+    state.vy += cur*0.000004*dt;
+
+    state.omega *= Math.exp(-2.2*dt);
+    state.x += state.vx*dt;
+    state.y += state.vy*dt;
+    state.a += state.omega*dt;
+
+    state.x=Math.max(.04,Math.min(.96,state.x));
+    state.y=Math.max(.06,Math.min(.94,state.y));
+  }
+
+  function render(){
+    boat.style.left=(state.x*100)+'%';
+    boat.style.top=(state.y*100)+'%';
+    boat.style.transform='translate(-50%,-50%) rotate('+state.a+'deg)';
+    const speed=Math.sqrt(state.vx*state.vx+state.vy*state.vy)*5000;
+    const p = Math.round(Math.abs(state.port)*100);
+    const s = Math.round(Math.abs(state.stbd)*100);
+    const pt = state.port>0?'A'+p:state.port<0?'R'+p:'N';
+    const st = state.stbd>0?'A'+s:state.stbd<0?'R'+s:'N';
+    status.textContent=speed.toFixed(1)+' kt · P '+pt+' / S '+st;
+  }
+
+  function loop(now){
+    let dt=Math.min((now-last)/1000,.03); last=now;
+    physics(dt); render();
+    requestAnimationFrame(loop);
+  }
+  updateSteer(0); render(); requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
