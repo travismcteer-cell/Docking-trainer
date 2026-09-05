@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Docking Trainer MVP v10</title>
+<title>Docking Trainer MVP v11</title>
 <style>
 :root{--water:#b9dde5;--ink:#17333a;--dock:#8b6a47;--panel:#fff}
 *{box-sizing:border-box}
@@ -175,11 +175,13 @@ input[type=range]{width:100%}
     steer.value=v;
     document.getElementById('steerVal').textContent=(v>0?'+':'')+v+'°';
 
-    // The drive graphics point aft from the transom. Their axis must remain
-    // collinear with the propeller thrust axis: the graphic points aft while
-    // the force on the boat points in the opposite (forward) direction.
-    driveP.style.transform='rotate('+v+'deg)';
-    driveS.style.transform='rotate('+v+'deg)';
+    // The red drive graphics extend AFT from the transom.
+    // Because the propulsive force on the boat acts in the opposite direction
+    // along that same axis, the visible aft end moves opposite the desired
+    // thrust direction. Thus port steering (negative) makes the aft end swing
+    // to starboard while thrust is directed to port, and vice versa.
+    driveP.style.transform='rotate('+(-v)+'deg)';
+    driveS.style.transform='rotate('+(-v)+'deg)';
   }
 
   steer.oninput=e=>updateSteer(e.target.value);
