@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Docking Trainer MVP v26 — Responsive Scale</title>
+<title>Docking Trainer MVP v28 — Outside Thrust Arrows</title>
 <style>
 :root{--water:#b9dde5;--ink:#17333a;--dock:#8b6a47;--panel:#fff}
 *{box-sizing:border-box}
@@ -34,7 +34,7 @@ header{padding:10px 14px;background:#fff;border-bottom:1px solid #ccd;display:fl
 .drive{position:absolute;left:-12px;width:18px;height:4px;background:#c23b22;transform-origin:right center;z-index:3;border-radius:2px}
 #driveP{top:7px} #driveS{bottom:7px}
 #boatLabel{position:absolute;left:38%;top:58%;font-size:12px;font-weight:800}
-.thrustArrow{position:absolute;height:3px;background:#17333a;transform-origin:0 50%;pointer-events:none;opacity:.8}
+.thrustArrow{position:absolute;height:3px;background:#17333a;transform-origin:0 50%;pointer-events:none;opacity:.9;z-index:8}
 .thrustArrow::after{content:'';position:absolute;right:-1px;top:-4px;border-left:8px solid #17333a;border-top:5px solid transparent;border-bottom:5px solid transparent}
 #thrustP,#thrustS{display:none}
 .arrow{position:absolute;font-size:11px;font-weight:700}
@@ -935,22 +935,34 @@ input[type=range]{width:100%}
     // Diagnostic thrust arrows. These show the FORCE ON THE BOAT, not the
     // direction the aft end of the sterndrive is pointing. Ahead thrust is
     // opposite the visible aft-pointing drive axis; reverse thrust flips 180°.
-    function showThrustArrow(el,setting,yLocal){
+    function showThrustArrow(el,setting,side){
       if(Math.abs(setting)<.02){ el.style.display='none'; return; }
+
+      // Keep the proven boat-local thrust-direction logic from v26.
+      // Only move the arrow anchors outside the visible hull.
+      const dims=boatDimsPx(viewRect);
+      const s=dims.scale;
+
       el.style.display='block';
-      const xLocal=4; // just forward of the transom in the boat graphic
+
+      // The unrotated sprite points bow-right. Put PORT just above the hull and
+      // STARBOARD just below it, both near the aft quarter.
+      const xLocal=6*s;
+      const clearance=8*s;
+      const yLocal=(side<0) ? -clearance : (dims.beam+clearance);
+
       el.style.left=xLocal+'px';
       el.style.top=yLocal+'px';
-      const len=18+34*Math.abs(setting);
-      el.style.width=len+'px';
+
+      const len=(18+34*Math.abs(setting))*s;
+      el.style.width=Math.max(14,len)+'px';
+
       let deg=-state.steer;
-      // Boat-local 0° points toward the bow (right in the unrotated graphic).
-      // Reverse force is exactly opposite ahead force.
       if(setting<0) deg+=180;
       el.style.transform='rotate('+deg+'deg)';
     }
-    showThrustArrow(thrustP,state.port,9);
-    showThrustArrow(thrustS,state.stbd,29);
+    showThrustArrow(thrustP,state.port,-1);
+    showThrustArrow(thrustS,state.stbd,1);
 
 
     // Draw docking lines in world coordinates.
