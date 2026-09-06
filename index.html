@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Docking Trainer MVP v25 — Docking Lines</title>
+<title>Docking Trainer MVP v26 — Responsive Scale</title>
 <style>
 :root{--water:#b9dde5;--ink:#17333a;--dock:#8b6a47;--panel:#fff}
 *{box-sizing:border-box}
@@ -19,7 +19,7 @@ header{padding:10px 14px;background:#fff;border-bottom:1px solid #ccd;display:fl
 #dockMap{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 #dockMap .dockShape{fill:#8b6a47;stroke:#5f472f;stroke-width:2}
 #dockMap .dockLabel{font:700 12px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;fill:#17333a;opacity:.55}
-#boatWrap{position:absolute;left:43%;top:69%;width:92px;height:38px;transform:translate(-50%,-50%) rotate(-90deg);transform-origin:center}
+#boatWrap{position:absolute;left:43%;top:69%;width:108px;height:36px;transform:translate(-50%,-50%) rotate(-90deg);transform-origin:center}
 #boat{
   position:absolute;inset:-5px -8px;
   z-index:2;
@@ -473,6 +473,18 @@ input[type=range]{width:100%}
     [{x:.325,y:.408333},{x:.350,y:.408333},{x:.292,y:.053333},{x:.267,y:.061667}]
   ];
 
+  function boatDimsPx(r){
+    // Dock geometry was authored against a 600-unit-tall world.
+    // Scale the boat from the SAME vertical world scale so its proportions
+    // relative to finger spacing remain identical on phones and desktops.
+    const s=r.height/600;
+    return {
+      length:108*s,
+      beam:36*s,
+      scale:s
+    };
+  }
+
   function hullPolyPx(x,y,aDeg,r){
     const cx=x*r.width, cy=y*r.height;
     const a=aDeg*Math.PI/180;
@@ -486,17 +498,19 @@ input[type=range]{width:100%}
     // narrower transom. These points deliberately sit just inside the dark hull
     // outline so contact visually occurs at the boat's edge instead of several
     // pixels before it.
+    const dims=boatDimsPx(r);
+    const s=dims.scale;
     const localPts=[
-      {x: 55, y:  0},   // bow tip
-      {x: 39, y: 11},   // starboard bow shoulder
-      {x: 14, y: 16},   // starboard midships
-      {x:-28, y: 16},   // starboard aft quarter
-      {x:-50, y: 12},   // starboard transom corner
-      {x:-52, y:  0},   // centre of transom
-      {x:-50, y:-12},   // port transom corner
-      {x:-28, y:-16},   // port aft quarter
-      {x: 14, y:-16},   // port midships
-      {x: 39, y:-11}    // port bow shoulder
+      {x: 55*s, y:  0},      // bow tip
+      {x: 39*s, y: 11*s},    // starboard bow shoulder
+      {x: 14*s, y: 16*s},    // starboard midships
+      {x:-28*s, y: 16*s},    // starboard aft quarter
+      {x:-50*s, y: 12*s},    // starboard transom corner
+      {x:-52*s, y:  0},      // centre of transom
+      {x:-50*s, y:-12*s},    // port transom corner
+      {x:-28*s, y:-16*s},    // port aft quarter
+      {x: 14*s, y:-16*s},    // port midships
+      {x: 39*s, y:-11*s}     // port bow shoulder
     ];
 
     return localPts.map(p=>({
@@ -551,6 +565,9 @@ input[type=range]{width:100%}
     const a=state.a*Math.PI/180;
     const fx=Math.cos(a), fy=Math.sin(a);
     const rx=-Math.sin(a), ry=Math.cos(a);
+    const s=boatDimsPx(r).scale;
+    xPx*=s;
+    yPx*=s;
     return {
       x:state.x+(fx*xPx+rx*yPx)/r.width,
       y:state.y+(fy*xPx+ry*yPx)/r.height
@@ -900,9 +917,20 @@ input[type=range]{width:100%}
   }
 
   function render(){
+    const viewRect=water.getBoundingClientRect();
+    const boatDims=boatDimsPx(viewRect);
+    boat.style.width=boatDims.length+'px';
+    boat.style.height=boatDims.beam+'px';
     boat.style.left=(state.x*100)+'%';
     boat.style.top=(state.y*100)+'%';
     boat.style.transform='translate(-50%,-50%) rotate('+state.a+'deg)';
+    const driveScale=boatDims.scale;
+    driveP.style.width=(18*driveScale)+'px';
+    driveS.style.width=(18*driveScale)+'px';
+    driveP.style.height=Math.max(2,4*driveScale)+'px';
+    driveS.style.height=Math.max(2,4*driveScale)+'px';
+    driveP.style.left=(-12*driveScale)+'px';
+    driveS.style.left=(-12*driveScale)+'px';
 
     // Diagnostic thrust arrows. These show the FORCE ON THE BOAT, not the
     // direction the aft end of the sterndrive is pointing. Ahead thrust is
