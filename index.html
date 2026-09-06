@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Docking Trainer MVP v22 — Wind & Current</title>
+<title>Docking Trainer MVP v23 — Mobile Controls</title>
 <style>
 :root{--water:#b9dde5;--ink:#17333a;--dock:#8b6a47;--panel:#fff}
 *{box-sizing:border-box}
@@ -98,6 +98,17 @@ input[type=range]{width:100%}
  #water{grid-column:1;grid-row:2;height:100%}
  #controls{grid-column:2;grid-row:2;overflow:auto;border-left:1px solid #ccd;border-top:0}
 }
+
+@media(max-width:899px){
+  #app{grid-template-rows:auto 52vh auto}
+  #water{min-height:52vh}
+  #controls{gap:7px;padding:7px}
+  .card{padding:8px;border-radius:10px}
+  .enginePad{gap:5px}
+  .engineBtn{padding:10px 3px;font-size:13px}
+  .engineStatus{margin-top:3px}
+}
+
 </style>
 </head>
 <body>
@@ -133,6 +144,43 @@ input[type=range]{width:100%}
 
 <div id="controls">
   <div class="card">
+    <div class="label">Momentary Throttle / Shift</div>
+    <div class="throttles">
+      <div class="stack">
+        <div class="small" style="text-align:center"><b>PORT</b></div>
+        <div class="enginePad" data-engine="port">
+          <button class="engineBtn ahead" data-power="50">50 FWD</button>
+          <button class="engineBtn ahead" data-power="25">25 FWD</button>
+          <button class="engineBtn reverse" data-power="-25">25 REV</button>
+          <button class="engineBtn reverse" data-power="-50">50 REV</button>
+        </div>
+        <div class="engineStatus" id="portVal">Neutral</div>
+      </div>
+      <div class="stack">
+        <div class="small" style="text-align:center"><b>BOTH</b></div>
+        <div class="enginePad" data-engine="both">
+          <button class="engineBtn ahead" data-power="50">50 FWD</button>
+          <button class="engineBtn ahead" data-power="25">25 FWD</button>
+          <button class="engineBtn reverse" data-power="-25">25 REV</button>
+          <button class="engineBtn reverse" data-power="-50">50 REV</button>
+        </div>
+        <div class="engineStatus" id="bothVal">Neutral</div>
+      </div>
+      <div class="stack">
+        <div class="small" style="text-align:center"><b>STARBOARD</b></div>
+        <div class="enginePad" data-engine="stbd">
+          <button class="engineBtn ahead" data-power="50">50 FWD</button>
+          <button class="engineBtn ahead" data-power="25">25 FWD</button>
+          <button class="engineBtn reverse" data-power="-25">25 REV</button>
+          <button class="engineBtn reverse" data-power="-50">50 REV</button>
+        </div>
+        <div class="engineStatus" id="stbdVal">Neutral</div>
+      </div>
+    </div>
+    <div class="small" style="margin-top:8px">Hold for power. Release = neutral. The centre column controls both engines.</div>
+  </div>
+
+  <div class="card">
     <div class="label">Steering</div>
     <input id="steer" type="range" min="-35" max="35" value="0">
     <div class="small">Port ← <span id="steerVal">0°</span> → Starboard</div>
@@ -142,48 +190,6 @@ input[type=range]{width:100%}
     <button id="center" style="width:100%;margin-top:6px">Center Drives</button>
   </div>
 
-  <div class="card">
-    <div class="label">Momentary Throttle / Shift</div>
-    <div class="throttles">
-      <div class="stack">
-        <div class="small" style="text-align:center"><b>PORT</b></div>
-        <div class="enginePad" data-engine="port">
-          <button class="engineBtn ahead" data-power="100">FULL FWD</button>
-          <button class="engineBtn ahead" data-power="50">50 FWD</button>
-          <button class="engineBtn ahead" data-power="25">25 FWD</button>
-          <button class="engineBtn reverse" data-power="-25">25 REV</button>
-          <button class="engineBtn reverse" data-power="-50">50 REV</button>
-          <button class="engineBtn reverse" data-power="-100">FULL REV</button>
-        </div>
-        <div class="engineStatus" id="portVal">Neutral</div>
-      </div>
-      <div class="stack">
-        <div class="small" style="text-align:center"><b>BOTH</b></div>
-        <div class="enginePad" data-engine="both">
-          <button class="engineBtn ahead" data-power="100">FULL FWD</button>
-          <button class="engineBtn ahead" data-power="50">50 FWD</button>
-          <button class="engineBtn ahead" data-power="25">25 FWD</button>
-          <button class="engineBtn reverse" data-power="-25">25 REV</button>
-          <button class="engineBtn reverse" data-power="-50">50 REV</button>
-          <button class="engineBtn reverse" data-power="-100">FULL REV</button>
-        </div>
-        <div class="engineStatus" id="bothVal">Neutral</div>
-      </div>
-      <div class="stack">
-        <div class="small" style="text-align:center"><b>STARBOARD</b></div>
-        <div class="enginePad" data-engine="stbd">
-          <button class="engineBtn ahead" data-power="100">FULL FWD</button>
-          <button class="engineBtn ahead" data-power="50">50 FWD</button>
-          <button class="engineBtn ahead" data-power="25">25 FWD</button>
-          <button class="engineBtn reverse" data-power="-25">25 REV</button>
-          <button class="engineBtn reverse" data-power="-50">50 REV</button>
-          <button class="engineBtn reverse" data-power="-100">FULL REV</button>
-        </div>
-        <div class="engineStatus" id="stbdVal">Neutral</div>
-      </div>
-    </div>
-    <div class="small" style="margin-top:8px">Hold a button to engage. Release it to return to neutral. The centre column applies the same command to both engines.</div>
-  </div>
 
   <div class="card">
     <div class="label">Environment</div>
@@ -213,7 +219,7 @@ input[type=range]{width:100%}
     </div>
   </div>
 
-  <div class="card"><div class="row"><button id="reset">Reset</button>  <div class="card"><div class="row"><button id="reset">Reset</button><button id="approach">New Approach</button></div></div>
+  <div class="card"><div class="row"><button id="reset">Reset</button><button id="approach">New Approach</button></div></div>
 </div>
 </div>
 
