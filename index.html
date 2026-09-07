@@ -1068,13 +1068,24 @@ body:not(.setup-mode) #controls .dirDial {
     return dirs[Math.round(((deg%360)+360)%360/45)%8];
   }
 
+  function directionArrow(deg){
+    const arrows=['↑','↗','→','↘','↓','↙','←','↖'];
+    return arrows[Math.round((((deg%360)+360)%360)/45)%8];
+  }
+
   function updateEnvReadouts(){
-    document.getElementById('windVal').textContent=(+windInput.value).toFixed(0)+' kt';
-    document.getElementById('curVal').textContent=(+curInput.value).toFixed(1)+' kt';
+    const windKt=(+windInput.value).toFixed(0);
+    const curKt=(+curInput.value).toFixed(1);
+    document.getElementById('windVal').textContent=windKt+' kt';
+    document.getElementById('curVal').textContent=curKt+' kt';
     document.getElementById('windDirVal').textContent=Math.round(windDirDeg)+'° '+cardinalLabel(windDirDeg);
     document.getElementById('curDirVal').textContent=Math.round(curDirDeg)+'° '+cardinalLabel(curDirDeg);
     windDirArrow.style.transform='translate(-50%,-100%) rotate('+windDirDeg+'deg)';
     curDirArrow.style.transform='translate(-50%,-100%) rotate('+curDirDeg+'deg)';
+    const windOverlay=document.getElementById('windArrow');
+    const curOverlay=document.getElementById('currentArrow');
+    if(windOverlay) windOverlay.textContent='WIND '+directionArrow(windDirDeg)+' '+windKt+' kt';
+    if(curOverlay) curOverlay.textContent='CURRENT '+directionArrow(curDirDeg)+' '+curKt+' kt';
   }
 
   function angleFromPointer(el,e){
@@ -1175,7 +1186,7 @@ body:not(.setup-mode) #controls .dirDial {
       : 'Hold for power. Release = neutral. 10% approximates idle-ahead/idle-reverse; 25% is a stronger docking blip. The centre column controls both engines.';
   }
 
-  function applyScenario(key=activeScenarioKey){
+  function applyScenario(key=activeScenarioKey,{preserveEnvironment=false}={}){
     activeScenarioKey=key;
     const sc=activeScenario();
     activeBoatKey=sc.boat;
@@ -1199,10 +1210,12 @@ body:not(.setup-mode) #controls .dirDial {
     ensureSpawnClear();
     // A newly spawned boat should never inherit a stale contact indicator.
     status.dataset.contact='0';
-    windInput.value=sc.wind.speedKt;
-    curInput.value=sc.current.speedKt;
-    windDirDeg=sc.wind.directionDeg;
-    curDirDeg=sc.current.directionDeg;
+    if(!preserveEnvironment){
+      windInput.value=sc.wind.speedKt;
+      curInput.value=sc.current.speedKt;
+      windDirDeg=sc.wind.directionDeg;
+      curDirDeg=sc.current.directionDeg;
+    }
     updateSteer(0);
     setThrottle('port',0);
     setThrottle('stbd',0);
@@ -1212,7 +1225,7 @@ body:not(.setup-mode) #controls .dirDial {
     populateSetupControls();
   }
 
-  function reset(){ applyScenario(activeScenarioKey); }
+  function reset(){ applyScenario(activeScenarioKey,{preserveEnvironment:true}); }
 
   document.getElementById('reset').onclick=reset;
   document.getElementById('approach').onclick=()=>{
@@ -1234,6 +1247,16 @@ body:not(.setup-mode) #controls .dirDial {
     renderSetupPreview(document.getElementById('marinaSelect').value,document.getElementById('spawnSelect').value);
   });
 
+  document.getElementById('scenarioSelect').addEventListener('change',()=>{
+    const sc=SCENARIOS[document.getElementById('scenarioSelect').value];
+    if(!sc) return;
+    windInput.value=sc.wind.speedKt;
+    curInput.value=sc.current.speedKt;
+    windDirDeg=sc.wind.directionDeg;
+    curDirDeg=sc.current.directionDeg;
+    updateEnvReadouts();
+  });
+
 
   startSimBtn.onclick=()=>{
     activeBoatKey=document.getElementById('boatSelect').value;
@@ -1246,7 +1269,7 @@ body:not(.setup-mode) #controls .dirDial {
       sc.boat=activeBoatKey;
       sc.marina=activeMarinaKey;
     }
-    applyScenario(activeScenarioKey);
+    applyScenario(activeScenarioKey,{preserveEnvironment:true});
     showSimulator();
   };
 
