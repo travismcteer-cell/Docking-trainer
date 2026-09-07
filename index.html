@@ -3,21 +3,75 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Docking Trainer MVP v28 — Outside Thrust Arrows</title>
+<title>Docking Trainer v40 — Configurable Boats & Marinas</title>
 <style>
-:root{--water:#b9dde5;--ink:#17333a;--dock:#8b6a47;--panel:#fff}
+:root{
+  --water:#0b7892;
+  --water-deep:#075d73;
+  --ink:#eaf4f6;
+  --dock:#b98a55;
+  --dock-dark:#76512f;
+  --panel:rgba(9,27,35,.92);
+  --panel-soft:rgba(18,42,51,.88);
+  --muted:#9eb5bc;
+  --accent:#6db5ff;
+}
 *{box-sizing:border-box}
-body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);background:#eef5f6}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);background:#0a1c22}
 #app{display:grid;grid-template-rows:auto 430px auto;min-height:100vh}
-header{padding:10px 14px;background:#fff;border-bottom:1px solid #ccd;display:flex;justify-content:space-between;gap:10px;align-items:center}
-#water{position:relative;overflow:hidden;background:
- linear-gradient(rgba(255,255,255,.22) 1px,transparent 1px),
- linear-gradient(90deg,rgba(255,255,255,.22) 1px,transparent 1px),
- var(--water);
- background-size:40px 40px;
- min-height:430px}
+header{
+  padding:10px 14px;
+  background:linear-gradient(180deg,#f8fbfc,#e9f0f2);
+  color:#17333a;
+  border-bottom:1px solid #b8c9ce;
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:center;
+  box-shadow:0 2px 8px rgba(0,0,0,.10);
+  z-index:20
+}
+#water{
+  position:relative;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 20% 15%,rgba(255,255,255,.10) 0 1px,transparent 2px),
+    radial-gradient(circle at 70% 55%,rgba(255,255,255,.08) 0 1px,transparent 2px),
+    repeating-linear-gradient(165deg,rgba(255,255,255,.035) 0 2px,transparent 2px 16px),
+    repeating-linear-gradient(20deg,rgba(0,0,0,.025) 0 1px,transparent 1px 18px),
+    linear-gradient(145deg,var(--water),var(--water-deep));
+  background-size:90px 70px,120px 95px,180px 180px,220px 220px,auto;
+  min-height:430px
+}
 #dockMap{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-#dockMap .dockShape{fill:#8b6a47;stroke:#5f472f;stroke-width:2}
+#dockMap .dockShape{
+  fill:url(#woodPlanks);
+  stroke:#5d3e26;
+  stroke-width:2;
+  filter:url(#dockShadow)
+}
+#dockMap .dockLabel{
+  font:700 12px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  fill:#f0eee8;
+  opacity:.78;
+  paint-order:stroke;
+  stroke:#17333a;
+  stroke-width:2px
+}
+#dockMap .piling{
+  fill:#d7d0c6;
+  stroke:#584537;
+  stroke-width:2;
+  filter:url(#dockShadow)
+}
+#dockMap .landShape{fill:#6eaa43;stroke:#4f7f32;stroke-width:1.5}
+#dockMap .shoreRock{fill:#8b8d86;stroke:#5d625e;stroke-width:1.5}
+#dockMap .gasDock{fill:#a7aaad;stroke:#777b80;stroke-width:2}
+#dockMap .gasText{
+  font:700 20px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  fill:#27353a;
+  letter-spacing:.5px
+}
 #dockMap .dockLabel{font:700 12px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;fill:#17333a;opacity:.55}
 #boatWrap{position:absolute;left:43%;top:69%;width:108px;height:36px;transform:translate(-50%,-50%) rotate(-90deg);transform-origin:center}
 #boat{
@@ -33,35 +87,53 @@ header{padding:10px 14px;background:#fff;border-bottom:1px solid #ccd;display:fl
 #cabin{display:none}
 .drive{position:absolute;left:-12px;width:18px;height:4px;background:#c23b22;transform-origin:right center;z-index:3;border-radius:2px}
 #driveP{top:7px} #driveS{bottom:7px}
-#boatLabel{position:absolute;left:38%;top:58%;font-size:12px;font-weight:800}
 .thrustArrow{position:absolute;height:3px;background:#17333a;transform-origin:0 50%;pointer-events:none;opacity:.9;z-index:8}
 .thrustArrow::after{content:'';position:absolute;right:-1px;top:-4px;border-left:8px solid #17333a;border-top:5px solid transparent;border-bottom:5px solid transparent}
 #thrustP,#thrustS{display:none}
 .arrow{position:absolute;font-size:11px;font-weight:700}
 #windArrow{left:18px;top:18px}
 #currentArrow{left:18px;top:60px}
-#controls{padding:10px;display:grid;gap:10px;background:#f8fbfb;border-top:1px solid #ccd}
-.card{background:#fff;border:1px solid #d7e0e2;border-radius:12px;padding:10px}
+#controls{
+  padding:10px;
+  display:grid;
+  gap:10px;
+  background:linear-gradient(180deg,#102c36,#0a2028);
+  border-top:1px solid rgba(255,255,255,.08)
+}
+.card{
+  background:linear-gradient(180deg,rgba(21,48,58,.97),rgba(10,30,38,.97));
+  border:1px solid rgba(190,216,224,.18);
+  border-radius:14px;
+  padding:10px;
+  box-shadow:0 6px 18px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.04)
+}
 .label{font-size:12px;font-weight:800;margin-bottom:6px}
-.small{font-size:11px;opacity:.75}
+.small{font-size:11px;color:var(--muted)}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .throttles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
 .stack{display:grid;gap:6px}
-button{border:1px solid #b8c8cc;background:#f7fbfc;border-radius:10px;padding:11px 8px;font-weight:700;color:var(--ink)}
-button.active{background:#d6edf2}
-input[type=range]{width:100%}
+button{
+  border:1px solid rgba(188,214,222,.32);
+  background:linear-gradient(180deg,#213f49,#17313a);
+  border-radius:10px;
+  padding:11px 8px;
+  font-weight:700;
+  color:#eef8fa;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04)
+}
+button.active{background:#345f6c}
+input[type=range]{width:100%;accent-color:#6db5ff}
 .enginePad{display:grid;grid-template-columns:1fr;gap:6px}
 .engineBtn{padding:13px 6px;touch-action:none;user-select:none;-webkit-user-select:none}
-.engineBtn.ahead{background:#eef8f1}
-.engineBtn.reverse{background:#fff1ef}
+.engineBtn.ahead{background:linear-gradient(180deg,#285d4a,#1d4939);border-color:#3d765f}
+.engineBtn.reverse{background:linear-gradient(180deg,#633a3a,#4b2a2a);border-color:#8a5555}
 .engineBtn.held{transform:translateY(1px);box-shadow:inset 0 0 0 2px rgba(23,51,58,.22)}
-.engineStatus{text-align:center;padding:7px 4px;margin-bottom:7px;border-radius:8px;background:#f4f8f9;font-weight:800}
 
 .envGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .envBox{display:grid;gap:7px}
 .dirDial{
   width:104px;height:104px;border-radius:50%;
-  border:2px solid #a9bec3;background:#eef7f9;
+  border:2px solid #557a86;background:radial-gradient(circle,#173640,#0f2830);
   position:relative;margin:2px auto 4px;
   touch-action:none;user-select:none;
   box-shadow:inset 0 0 0 4px rgba(255,255,255,.65);
@@ -92,6 +164,14 @@ input[type=range]{width:100%}
 .dirTicks .w{left:5px;top:50%;transform:translateY(-50%)}
 .dirReadout{text-align:center;font-size:11px;font-weight:800}
 
+
+.setupGrid{display:grid;grid-template-columns:1fr;gap:7px}
+.setupGrid label{display:grid;gap:4px;font-size:11px;color:var(--muted);font-weight:700}
+.setupGrid select{
+  width:100%;padding:9px 10px;border-radius:9px;border:1px solid rgba(188,214,222,.32);
+  color:#eef8fa;background:#17313a;font:inherit
+}
+
 @media(min-width:900px){
  #app{grid-template-columns:1fr 330px;grid-template-rows:auto 1fr;height:100vh}
  header{grid-column:1/-1}
@@ -100,13 +180,16 @@ input[type=range]{width:100%}
 }
 
 @media(max-width:899px){
+  header{font-size:13px;padding:8px 10px}
+  #status{font-size:12px;text-align:right}
+  #controls{background:#0b2028}
+
   #app{grid-template-rows:auto 52vh auto}
   #water{min-height:52vh}
   #controls{gap:7px;padding:7px}
   .card{padding:8px;border-radius:10px}
   .enginePad{gap:5px}
   .engineBtn{padding:10px 3px;font-size:13px}
-  .engineStatus{margin-top:3px}
 }
 
 
@@ -121,24 +204,32 @@ input[type=range]{width:100%}
 }
 .mooringLine.taut{height:4px;background:#d9943b}
 
+.waterVignette{
+  position:absolute;inset:0;pointer-events:none;z-index:1;
+  box-shadow:inset 0 0 90px rgba(0,18,24,.22)
+}
+#dockMap{z-index:2}
+#boatWrap{z-index:5}
+#windArrow,#currentArrow{z-index:8;color:#f3fbfd;text-shadow:0 2px 4px rgba(0,0,0,.45);font-size:14px}
 </style>
 </head>
 <body>
 <div id="app">
-<header><strong>Docking Trainer — Custom Dock</strong><span id="status">Ready</span></header>
+<header><strong>Docking Trainer — Configurable</strong><span id="status">Ready</span></header>
 
-<div id="water">
-  <svg id="dockMap" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-label="Custom dock layout">
-    <!-- Dock based directly on the user's top-down sketch, shifted left for approach room. -->
-    <rect class="dockShape" x="105" y="245" width="28" height="255"/>
-    <rect class="dockShape" x="105" y="245" width="245" height="24"/>
-    <rect class="dockShape" x="105" y="325" width="245" height="22"/>
-    <rect class="dockShape" x="105" y="405" width="245" height="22"/>
-    <rect class="dockShape" x="105" y="485" width="220" height="24"/>
-    <rect class="dockShape" x="300" y="485" width="28" height="92"/>
-    <polygon class="dockShape" points="325,245 350,245 292,32 267,37"/>
-    <text class="dockLabel" x="375" y="337">FINGER DOCKS</text>
-    <text class="dockLabel" x="355" y="500">WHARF</text>
+<div id="water"><div class="waterVignette"></div>
+  <svg id="dockMap" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-label="Marina dock layout">
+    <defs>
+      <pattern id="woodPlanks" width="24" height="24" patternUnits="userSpaceOnUse">
+        <rect width="24" height="24" fill="#bb8b58"/>
+        <path d="M0 0H24 M0 12H24" stroke="#d1a574" stroke-width="1"/>
+        <path d="M0 0V24 M12 0V24 M24 0V24" stroke="#8c623d" stroke-width=".8" opacity=".65"/>
+      </pattern>
+      <filter id="dockShadow" x="-30%" y="-30%" width="170%" height="180%">
+        <feDropShadow dx="4" dy="5" stdDeviation="3" flood-color="#001820" flood-opacity=".45"/>
+      </filter>
+    </defs>
+    <g id="marinaVisuals"></g>
   </svg>
   <div id="windArrow">WIND →</div>
   <div id="currentArrow">CURRENT ↓</div>
@@ -151,7 +242,6 @@ input[type=range]{width:100%}
     <div class="thrustArrow" id="thrustP"></div>
     <div class="thrustArrow" id="thrustS"></div>
   </div>
-  <div id="boatLabel">BOAT</div>
   <div id="lineBow" class="mooringLine"></div>
   <div id="lineFwdSpring" class="mooringLine"></div>
   <div id="lineAftSpring" class="mooringLine"></div>
@@ -165,35 +255,32 @@ input[type=range]{width:100%}
       <div class="stack">
         <div class="small" style="text-align:center"><b>PORT</b></div>
         <div class="enginePad" data-engine="port">
-          <button class="engineBtn ahead" data-power="50">50 FWD</button>
           <button class="engineBtn ahead" data-power="25">25 FWD</button>
+          <button class="engineBtn ahead" data-power="5">5 FWD</button>
+          <button class="engineBtn reverse" data-power="-5">5 REV</button>
           <button class="engineBtn reverse" data-power="-25">25 REV</button>
-          <button class="engineBtn reverse" data-power="-50">50 REV</button>
         </div>
-        <div class="engineStatus" id="portVal">Neutral</div>
       </div>
       <div class="stack">
         <div class="small" style="text-align:center"><b>BOTH</b></div>
         <div class="enginePad" data-engine="both">
-          <button class="engineBtn ahead" data-power="50">50 FWD</button>
           <button class="engineBtn ahead" data-power="25">25 FWD</button>
+          <button class="engineBtn ahead" data-power="5">5 FWD</button>
+          <button class="engineBtn reverse" data-power="-5">5 REV</button>
           <button class="engineBtn reverse" data-power="-25">25 REV</button>
-          <button class="engineBtn reverse" data-power="-50">50 REV</button>
         </div>
-        <div class="engineStatus" id="bothVal">Neutral</div>
       </div>
       <div class="stack">
         <div class="small" style="text-align:center"><b>STARBOARD</b></div>
         <div class="enginePad" data-engine="stbd">
-          <button class="engineBtn ahead" data-power="50">50 FWD</button>
           <button class="engineBtn ahead" data-power="25">25 FWD</button>
+          <button class="engineBtn ahead" data-power="5">5 FWD</button>
+          <button class="engineBtn reverse" data-power="-5">5 REV</button>
           <button class="engineBtn reverse" data-power="-25">25 REV</button>
-          <button class="engineBtn reverse" data-power="-50">50 REV</button>
         </div>
-        <div class="engineStatus" id="stbdVal">Neutral</div>
       </div>
     </div>
-    <div class="small" style="margin-top:8px">Hold for power. Release = neutral. The centre column controls both engines.</div>
+    <div class="small" style="margin-top:8px">Hold for power. Release = neutral. 5% approximates idle-ahead/idle-reverse; 25% is a stronger docking blip. The centre column controls both engines.</div>
   </div>
 
   <div class="card">
@@ -250,11 +337,209 @@ input[type=range]{width:100%}
   </div>
 
   <div class="card"><div class="row"><button id="reset">Reset</button><button id="approach">New Approach</button></div></div>
+
+  <div class="card">
+    <div class="label">Simulator Setup</div>
+    <div class="setupGrid">
+      <label>Boat<select id="boatSelect"></select></label>
+      <label>Marina<select id="marinaSelect"></select></label>
+      <label>Scenario<select id="scenarioSelect"></select></label>
+      <button id="applySetup">Apply Setup</button>
+    </div>
+    <div class="small" style="margin-top:7px">Boat, marina and scenario definitions are now data-driven. Add another entry in the configuration to expand the simulator.</div>
+  </div>
 </div>
 </div>
 
 <script>
 (function(){
+
+  // ---------------------------------------------------------------------------
+  // CONFIGURATION LAYER
+  // ---------------------------------------------------------------------------
+  // The simulation engine below reads these definitions instead of hard-coding
+  // a single boat or marina. Add new entries here to expand the app.
+  const BOATS = {
+    cruiser31: {
+      name: "31 ft Twin Sterndrive Cruiser",
+      dimensions: { lengthFt: 31, beamFt: 10.4 },
+      render: { lengthUnits: 108, beamUnits: 36, spriteUrl: null },
+      propulsion: {
+        type: "twinSterndrive",
+        maxSteerDeg: 35,
+        thrust: 0.065,
+        reverseEfficiency: 0.90,
+        reverseSteerGain: 1.32,
+        driveX: -0.46,
+        engineY: 0.16,
+        steeringYawGain: 1.15
+      },
+      hydrodynamics: {
+        waterCenterX: -0.21,
+        airCenterX: 0.09,
+        forwardLinearDrag: 0.055,
+        forwardQuadraticDrag: 0.30,
+        lateralLinearDrag: 0.55,
+        lateralQuadraticDrag: 0.95,
+        yawDampingBase: 0.18,
+        yawDampingSpeedGain: 10,
+        yawDampingSpeedMax: 0.22
+      },
+      maneuvering: {
+        fullPowerTurnRadiusFt: 20,
+        turnCalibrationResponse: 2.0
+      },
+      collisionShapeUnits: [
+        [55,0],[39,11],[14,16],[-28,16],[-50,12],[-52,0],
+        [-50,-12],[-28,-16],[14,-16],[39,-11]
+      ]
+    }
+  };
+
+  const MARINAS = {
+    referenceMarina: {
+      name: "Three-Sided Training Marina",
+      world: { widthFt: 180, heightFt: 120 },
+      // All geometry is normalized 0..1. The SAME dock rectangles are used for
+      // both SVG rendering and collision detection.
+      docks: [
+        {id:"topWharf", x:.205,y:.080,w:.675,h:.0433},
+        {id:"topReturn",x:.205,y:.080,w:.026,h:.2567},
+        {id:"topFinger1",x:.380,y:.080,w:.026,h:.3033},
+        {id:"topFinger2",x:.610,y:.080,w:.026,h:.3033},
+        {id:"leftSpine",x:.036,y:.2917,w:.026,h:.5200},
+        {id:"leftFinger1",x:.036,y:.2917,w:.208,h:.0400},
+        {id:"leftFinger2",x:.036,y:.4583,w:.208,h:.0367},
+        {id:"leftFinger3",x:.036,y:.6250,w:.208,h:.0367},
+        {id:"leftBottom",x:.036,y:.7917,w:.188,h:.0400},
+        {id:"leftReturn",x:.199,y:.7917,w:.026,h:.1766}
+      ],
+      solidAreas: [
+        // Concrete gas-dock apron is a solid boundary.
+        {id:"gasApron", x:.910,y:0,w:.090,h:1, className:"gasDock"}
+      ],
+      pilings: [
+        [.254,.074],[.432,.074],[.654,.074],[.884,.074],
+        [.231,.337],[.406,.383],[.636,.383],
+        [.060,.255],[.230,.455],[.230,.622],[.230,.789],[.209,.965],
+        [.934,.345],[.934,.775],[.934,.955]
+      ],
+      // Land is represented as normalized polygons, just like the docks.
+      // These polygons are used for BOTH rendering and collision detection.
+      landPolygons: [
+        {
+          id:"topShore",
+          points:[
+            [0,0],[.910,0],[.910,.055],[.760,.055],[.620,.061],[.470,.056],
+            [.320,.061],[.170,.058],[0,.055]
+          ]
+        },
+        {
+          id:"leftShore",
+          points:[
+            [0,0],[.120,0],[.102,.090],[.088,.150],[.070,.245],
+            [.055,.360],[.046,.505],[.050,.660],[.064,.810],[.090,1],[0,1]
+          ]
+        }
+      ],
+      shorelineDecor: {
+        rocks:[
+          [96,92,10],[84,112,11],[73,138,10],[63,168,10],[54,202,10],[46,240,10],
+          [40,282,9],[38,326,10],[39,372,9],[44,420,10],[54,470,11],[68,520,11],[82,565,11],
+          [164,36,10],[208,31,10],[256,35,9],[322,32,10],[394,37,11],[470,34,10],[548,36,10],[624,33,10],[702,35,10],[782,31,10],[848,34,9]
+        ]
+      },
+      labels: [
+        {text:"GAS DOCK",x:965,y:355,rotate:-90,className:"gasText"}
+      ],
+      spawnPoints: [
+        {x:.50,y:.86,heading:270},
+        {x:.58,y:.50,heading:180},
+        {x:.48,y:.67,heading:165}
+      ]
+    }
+  };
+
+  const SCENARIOS = {
+    calmPractice: {
+      name: "Calm Practice",
+      marina: "referenceMarina",
+      boat: "cruiser31",
+      spawnIndex: 0,
+      wind: { speedKt: 0, directionDeg: 90 },
+      current: { speedKt: 0, directionDeg: 180 }
+    },
+    crosswindPractice: {
+      name: "Crosswind Practice",
+      marina: "referenceMarina",
+      boat: "cruiser31",
+      spawnIndex: 0,
+      wind: { speedKt: 10, directionDeg: 90 },
+      current: { speedKt: 0.5, directionDeg: 180 }
+    }
+  };
+
+  let activeBoatKey = "cruiser31";
+  let activeMarinaKey = "referenceMarina";
+  let activeScenarioKey = "calmPractice";
+
+  function activeBoat(){ return BOATS[activeBoatKey]; }
+  function activeMarina(){ return MARINAS[activeMarinaKey]; }
+  function activeScenario(){ return SCENARIOS[activeScenarioKey]; }
+
+  function rectPolyN(r){
+    return [
+      {x:r.x,y:r.y},{x:r.x+r.w,y:r.y},
+      {x:r.x+r.w,y:r.y+r.h},{x:r.x,y:r.y+r.h}
+    ];
+  }
+
+  function collisionPolysN(){
+    const m=activeMarina();
+    const rects=[...m.docks,...(m.solidAreas||[])].map(rectPolyN);
+    const land=(m.landPolygons||[]).map(poly=>poly.points.map(([x,y])=>({x,y})));
+    return [...rects,...land];
+  }
+
+  function renderMarina(){
+    const m=activeMarina();
+    const g=document.getElementById('marinaVisuals');
+    const parts=[];
+    for(const land of m.landPolygons||[]){
+      const points=land.points.map(([x,y])=>`${x*1000},${y*600}`).join(' ');
+      parts.push(`<polygon class="landShape" points="${points}"/>`);
+    }
+    for(const [cx,cy,r] of m.shorelineDecor?.rocks||[]){
+      parts.push(`<circle class="shoreRock" cx="${cx}" cy="${cy}" r="${r}"/>`);
+    }
+    for(const d of m.docks){
+      parts.push(`<rect class="dockShape" x="${d.x*1000}" y="${d.y*600}" width="${d.w*1000}" height="${d.h*600}"/>`);
+    }
+    for(const a of m.solidAreas||[]){
+      parts.push(`<rect class="${a.className||'gasDock'}" x="${a.x*1000}" y="${a.y*600}" width="${a.w*1000}" height="${a.h*600}"/>`);
+    }
+    for(const [x,y] of m.pilings||[]){
+      parts.push(`<circle class="piling" cx="${x*1000}" cy="${y*600}" r="8"/>`);
+    }
+    for(const l of m.labels||[]){
+      const transform=l.rotate?` transform="rotate(${l.rotate} ${l.x} ${l.y})"`:'';
+      parts.push(`<text class="${l.className||'dockLabel'}" x="${l.x}" y="${l.y}"${transform}>${l.text}</text>`);
+    }
+    g.innerHTML=parts.join('');
+  }
+
+  function populateSetupControls(){
+    const boatSelect=document.getElementById('boatSelect');
+    const marinaSelect=document.getElementById('marinaSelect');
+    const scenarioSelect=document.getElementById('scenarioSelect');
+    boatSelect.innerHTML=Object.entries(BOATS).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join('');
+    marinaSelect.innerHTML=Object.entries(MARINAS).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join('');
+    scenarioSelect.innerHTML=Object.entries(SCENARIOS).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join('');
+    boatSelect.value=activeBoatKey;
+    marinaSelect.value=activeMarinaKey;
+    scenarioSelect.value=activeScenarioKey;
+  }
+
   const water=document.getElementById('water');
   const boat=document.getElementById('boatWrap');
   const driveP=document.getElementById('driveP');
@@ -286,7 +571,7 @@ input[type=range]{width:100%}
   let lineNotice='';
   let lineNoticeUntil=0;
 
-  let state={x:.68,y:.58,a:180,vx:0,vy:0,omega:0,port:0,stbd:0,steer:0};
+  let state={x:.50,y:.86,a:180,vx:0,vy:0,omega:0,port:0,stbd:0,steer:0};
   let last=performance.now();
 
   function engineText(v){
@@ -301,13 +586,8 @@ input[type=range]{width:100%}
     if(which==='both'){
       state.port=v/100;
       state.stbd=v/100;
-      document.getElementById('portVal').textContent=engineText(v);
-      document.getElementById('stbdVal').textContent=engineText(v);
-      document.getElementById('bothVal').textContent=engineText(v);
     } else {
       state[which]=v/100;
-      document.getElementById(which==='port'?'portVal':'stbdVal').textContent=engineText(v);
-      document.getElementById('bothVal').textContent=(state.port===state.stbd)?engineText(state.port*100):'Mixed';
     }
   }
 
@@ -352,7 +632,9 @@ input[type=range]{width:100%}
   });
 
   function updateSteer(v){
-    state.steer=+v;
+    const maxSteer=activeBoat().propulsion.maxSteerDeg;
+    v=Math.max(-maxSteer,Math.min(maxSteer,+v));
+    state.steer=v;
     steer.value=v;
     document.getElementById('steerVal').textContent=(v>0?'+':'')+v+'°';
 
@@ -366,8 +648,8 @@ input[type=range]{width:100%}
   }
 
   steer.oninput=e=>updateSteer(e.target.value);
-  document.getElementById('portLock').onclick=()=>updateSteer(-35);
-  document.getElementById('stbdLock').onclick=()=>updateSteer(35);
+  document.getElementById('portLock').onclick=()=>updateSteer(-activeBoat().propulsion.maxSteerDeg);
+  document.getElementById('stbdLock').onclick=()=>updateSteer(activeBoat().propulsion.maxSteerDeg);
   document.getElementById('center').onclick=()=>updateSteer(0);
 
   const windInput=document.getElementById('wind');
@@ -379,8 +661,8 @@ input[type=range]{width:100%}
 
   // Direction is the direction the air/water is moving TOWARD.
   // 0=N/up-screen, 90=E/right-screen, 180=S/down-screen, 270=W/left-screen.
-  let windDirDeg=90;
-  let curDirDeg=180;
+  let windDirDeg=activeScenario().wind.directionDeg;
+  let curDirDeg=activeScenario().current.directionDeg;
 
   function cardinalLabel(deg){
     const dirs=['N','NE','E','SE','S','SW','W','NW'];
@@ -436,51 +718,70 @@ input[type=range]{width:100%}
 
 
 
-  function reset(){
-    state={x:.68,y:.58,a:180,vx:0,vy:0,omega:0,port:0,stbd:0,steer:0};
+  function applyScenario(key=activeScenarioKey){
+    activeScenarioKey=key;
+    const sc=activeScenario();
+    activeBoatKey=sc.boat;
+    activeMarinaKey=sc.marina;
+    renderMarina();
+    const b=activeBoat();
+    steer.min=-b.propulsion.maxSteerDeg;
+    steer.max=b.propulsion.maxSteerDeg;
+    if(b.render.spriteUrl){
+      document.getElementById('boat').style.backgroundImage=`url("${b.render.spriteUrl}")`;
+    }
+    const spawn=activeMarina().spawnPoints[sc.spawnIndex||0] || activeMarina().spawnPoints[0];
+    state={x:spawn.x,y:spawn.y,a:spawn.heading,vx:0,vy:0,omega:0,port:0,stbd:0,steer:0};
+    windInput.value=sc.wind.speedKt;
+    curInput.value=sc.current.speedKt;
+    windDirDeg=sc.wind.directionDeg;
+    curDirDeg=sc.current.directionDeg;
     updateSteer(0);
     setThrottle('port',0);
     setThrottle('stbd',0);
     releaseAllLines();
+    updateEnvReadouts();
+    populateSetupControls();
   }
+
+  function reset(){ applyScenario(activeScenarioKey); }
 
   document.getElementById('reset').onclick=reset;
   document.getElementById('approach').onclick=()=>{
     reset();
-    state.x=.62+Math.random()*.22;
-    state.y=.30+Math.random()*.42;
-    state.a=150+Math.random()*60;
+    const spawns=activeMarina().spawnPoints;
+    const spawn=spawns[Math.floor(Math.random()*spawns.length)];
+    state.x=spawn.x; state.y=spawn.y; state.a=spawn.heading;
+  };
+
+  document.getElementById('applySetup').onclick=()=>{
+    activeBoatKey=document.getElementById('boatSelect').value;
+    activeMarinaKey=document.getElementById('marinaSelect').value;
+    const selectedScenario=document.getElementById('scenarioSelect').value;
+    const sc=SCENARIOS[selectedScenario];
+    // If the scenario points at the selected boat/marina use it directly;
+    // otherwise keep manual boat/marina choices and only borrow environment.
+    activeScenarioKey=selectedScenario;
+    if(sc){
+      sc.boat=activeBoatKey;
+      sc.marina=activeMarinaKey;
+    }
+    applyScenario(activeScenarioKey);
   };
 
 
   // Dock geometry is shared conceptually with the SVG above.
   // Hull collision now uses a tapered polygon matched to the Sea Ray sprite.
   // Coordinates are normalized to the water viewport (SVG viewBox / 1000 x 600).
-  const dockPolysN = [
-    // main vertical spine
-    [{x:.105,y:.408333},{x:.133,y:.408333},{x:.133,y:.833333},{x:.105,y:.833333}],
-    // top horizontal
-    [{x:.105,y:.408333},{x:.350,y:.408333},{x:.350,y:.448333},{x:.105,y:.448333}],
-    // middle finger 1
-    [{x:.105,y:.541667},{x:.350,y:.541667},{x:.350,y:.578333},{x:.105,y:.578333}],
-    // middle finger 2
-    [{x:.105,y:.675000},{x:.350,y:.675000},{x:.350,y:.711667},{x:.105,y:.711667}],
-    // lower wharf
-    [{x:.105,y:.808333},{x:.325,y:.808333},{x:.325,y:.848333},{x:.105,y:.848333}],
-    // lower return leg
-    [{x:.300,y:.808333},{x:.328,y:.808333},{x:.328,y:.961667},{x:.300,y:.961667}],
-    // angled upper wharf
-    [{x:.325,y:.408333},{x:.350,y:.408333},{x:.292,y:.053333},{x:.267,y:.061667}]
-  ];
+  // Collision polygons are generated from the active marina definition.
+
 
   function boatDimsPx(r){
-    // Dock geometry was authored against a 600-unit-tall world.
-    // Scale the boat from the SAME vertical world scale so its proportions
-    // relative to finger spacing remain identical on phones and desktops.
     const s=r.height/600;
+    const b=activeBoat();
     return {
-      length:108*s,
-      beam:36*s,
+      length:b.render.lengthUnits*s,
+      beam:b.render.beamUnits*s,
       scale:s
     };
   }
@@ -500,18 +801,7 @@ input[type=range]{width:100%}
     // pixels before it.
     const dims=boatDimsPx(r);
     const s=dims.scale;
-    const localPts=[
-      {x: 55*s, y:  0},      // bow tip
-      {x: 39*s, y: 11*s},    // starboard bow shoulder
-      {x: 14*s, y: 16*s},    // starboard midships
-      {x:-28*s, y: 16*s},    // starboard aft quarter
-      {x:-50*s, y: 12*s},    // starboard transom corner
-      {x:-52*s, y:  0},      // centre of transom
-      {x:-50*s, y:-12*s},    // port transom corner
-      {x:-28*s, y:-16*s},    // port aft quarter
-      {x: 14*s, y:-16*s},    // port midships
-      {x: 39*s, y:-11*s}     // port bow shoulder
-    ];
+    const localPts=activeBoat().collisionShapeUnits.map(([x,y])=>({x:x*s,y:y*s}));
 
     return localPts.map(p=>({
       x:cx + fx*p.x + rx*p.y,
@@ -550,12 +840,68 @@ input[type=range]{width:100%}
     return true;
   }
 
+  // SAT is fast and reliable for our convex rectangular docks, but the
+  // configurable shoreline can be concave. Using SAT on a concave polygon can
+  // create invisible false-positive collision regions in otherwise open water.
+  function pointInPolygon(pt,poly){
+    let inside=false;
+    for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+      const a=poly[i], b=poly[j];
+      const crosses=((a.y>pt.y)!=(b.y>pt.y)) &&
+        (pt.x < (b.x-a.x)*(pt.y-a.y)/((b.y-a.y)||1e-12)+a.x);
+      if(crosses) inside=!inside;
+    }
+    return inside;
+  }
+
+  function orient(a,b,c){
+    return (b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
+  }
+
+  function onSegment(a,b,p,eps=0.01){
+    return Math.abs(orient(a,b,p))<=eps &&
+      p.x>=Math.min(a.x,b.x)-eps && p.x<=Math.max(a.x,b.x)+eps &&
+      p.y>=Math.min(a.y,b.y)-eps && p.y<=Math.max(a.y,b.y)+eps;
+  }
+
+  function segmentsIntersect(a,b,c,d){
+    const eps=0.01;
+    const o1=orient(a,b,c), o2=orient(a,b,d), o3=orient(c,d,a), o4=orient(c,d,b);
+    if(((o1>eps && o2<-eps)||(o1<-eps && o2>eps)) &&
+       ((o3>eps && o4<-eps)||(o3<-eps && o4>eps))) return true;
+    return onSegment(a,b,c,eps)||onSegment(a,b,d,eps)||
+           onSegment(c,d,a,eps)||onSegment(c,d,b,eps);
+  }
+
+  function polygonsOverlapGeneral(a,b){
+    // Works for convex or concave simple polygons.
+    for(let i=0;i<a.length;i++){
+      const a1=a[i], a2=a[(i+1)%a.length];
+      for(let j=0;j<b.length;j++){
+        const b1=b[j], b2=b[(j+1)%b.length];
+        if(segmentsIntersect(a1,a2,b1,b2)) return true;
+      }
+    }
+    if(pointInPolygon(a[0],b)) return true;
+    if(pointInPolygon(b[0],a)) return true;
+    return false;
+  }
+
   function collidesAt(x,y,aDeg){
     const r=water.getBoundingClientRect();
     if(!r.width || !r.height) return false;
     const hull=hullPolyPx(x,y,aDeg,r);
-    for(const dp of dockPolysN){
-      if(polysOverlapSAT(hull,dockPolyPx(dp,r))) return true;
+    const m=activeMarina();
+
+    // Docks and solid rectangular structures are convex, so keep SAT here.
+    for(const obstacle of [...m.docks,...(m.solidAreas||[])]){
+      if(polysOverlapSAT(hull,dockPolyPx(rectPolyN(obstacle),r))) return true;
+    }
+
+    // Land polygons may be irregular/concave, so use general polygon overlap.
+    for(const land of m.landPolygons||[]){
+      const landPx=dockPolyPx(land.points.map(([px,py])=>({x:px,y:py})),r);
+      if(polygonsOverlapGeneral(hull,landPx)) return true;
     }
     return false;
   }
@@ -576,7 +922,7 @@ input[type=range]{width:100%}
 
   function sampleDockPoints(r){
     const pts=[];
-    for(const poly of dockPolysN){
+    for(const poly of collisionPolysN()){
       for(let i=0;i<poly.length;i++){
         const a=poly[i], b=poly[(i+1)%poly.length];
         const len=Math.hypot((b.x-a.x)*r.width,(b.y-a.y)*r.height);
@@ -697,7 +1043,7 @@ input[type=range]{width:100%}
     // by increasing the EFFECTIVE reverse steering angle while leaving straight
     // reverse unchanged. Hard-over 35° becomes about 46°, capped at 50°.
     function thrustDirection(setting){
-      const reverseSteerGain = 1.32;
+      const reverseSteerGain = activeBoat().propulsion.reverseSteerGain;
       const effectiveSteer = setting < 0
         ? Math.max(-50, Math.min(50, state.steer * reverseSteerGain)) * Math.PI/180
         : steerRad;
@@ -708,14 +1054,14 @@ input[type=range]{width:100%}
     }
 
     // Arbitrary simulator units, tuned for low-speed docking.
-    const thrust=0.065;
+    const thrust=activeBoat().propulsion.thrust;
 
     // Longitudinal locations are fractions of boat length relative to midships.
     // -0.50 = transom, +0.50 = bow.
-    const DRIVE_X=-0.46;
-    const WATER_COR_X=-0.21;  // ~1/4–1/3 boat length forward of transom
-    const AIR_COE_X= 0.09;    // a few feet forward of midships on a 31-footer
-    const ENGINE_Y=0.16;      // port/starboard offset from centreline
+    const DRIVE_X=activeBoat().propulsion.driveX;
+    const WATER_COR_X=activeBoat().hydrodynamics.waterCenterX;
+    const AIR_COE_X=activeBoat().hydrodynamics.airCenterX;
+    const ENGINE_Y=activeBoat().propulsion.engineY;
 
     // Converts our normalized force/lever units into visible yaw acceleration.
     const yawScale=1850;
@@ -737,16 +1083,38 @@ input[type=range]{width:100%}
 
       // Bravo 3 reverse remains slightly less efficient overall than ahead,
       // but gets extra steering authority at large drive angles.
-      const T=thrust*setting*(setting<0 ? .9 : 1);
+      const T=thrust*setting*(setting<0 ? activeBoat().propulsion.reverseEfficiency : 1);
       const dir=thrustDirection(setting);
+
+      const Fx=dir.x*T;
+      const Fy=dir.y*T;
 
       // side: port=-1, starboard=+1
       addForce(
-        dir.x*T,
-        dir.y*T,
+        Fx,
+        Fy,
         DRIVE_X,
         side*ENGINE_Y
       );
+
+      // Low-speed sterndrive steering authority:
+      // A cruiser hull strongly resists sideways translation. In practice, the
+      // lateral component of vectored thrust at the transom therefore produces
+      // more pivoting around the underwater centre of resistance than a simple
+      // free-body point-mass model predicts.
+      //
+      // Add ONLY the missing yaw moment from the LATERAL thrust component.
+      // This leaves centred differential-throttle behaviour essentially unchanged.
+      const lateralThrust = Fx*rightx + Fy*righty;
+      const steeringAmount = Math.min(1,Math.abs(state.steer)/activeBoat().propulsion.maxSteerDeg);
+
+      // Effective extra lever arm aft of the water centre of resistance.
+      // Ramp it in with steering so small wheel inputs remain gentle.
+      const STEERING_YAW_GAIN = activeBoat().propulsion.steeringYawGain;
+      const extraLever = (WATER_COR_X - DRIVE_X) * STEERING_YAW_GAIN * steeringAmount;
+
+      // Sign follows the physical moment of lateral force applied aft of the pivot.
+      state.omega += (-extraLever * lateralThrust) * yawScale * dt;
     }
 
     engineForce(state.port,-1);
@@ -759,10 +1127,10 @@ input[type=range]{width:100%}
     // Hydrodynamic resistance acts primarily around an aft centre of resistance.
     // Use a small linear term plus quadratic drag. This lets a heavy cruiser
     // carry momentum at low speed without allowing unlimited acceleration.
-    const forwardLinearDrag=0.055;
-    const forwardQuadraticDrag=0.30;
-    const lateralLinearDrag=0.55;
-    const lateralQuadraticDrag=0.95;
+    const forwardLinearDrag=activeBoat().hydrodynamics.forwardLinearDrag;
+    const forwardQuadraticDrag=activeBoat().hydrodynamics.forwardQuadraticDrag;
+    const lateralLinearDrag=activeBoat().hydrodynamics.lateralLinearDrag;
+    const lateralQuadraticDrag=activeBoat().hydrodynamics.lateralQuadraticDrag;
 
     const forwardResistance =
       forwardLinearDrag*vf + forwardQuadraticDrag*vf*Math.abs(vf);
@@ -871,8 +1239,43 @@ input[type=range]{width:100%}
       }
     }
 
-    // Rotational damping is intentionally modest so a heavy cruiser carries yaw momentum.
-    state.omega *= Math.exp(-0.75*dt);
+    // REAL-WORLD TURNING-RADIUS CALIBRATION
+    // Sea Ray 310 reference: both engines ahead, hard-over steering, idle/docking
+    // speed -> approximately 40 ft turning DIAMETER, i.e. ~20 ft radius.
+    //
+    // Apply this AFTER engine, hull-drag, wind/current and line forces. That way
+    // the calibration represents the resulting steady low-speed curvature rather
+    // than being immediately cancelled by the hydrodynamic resistance model.
+    const speedKt=Math.hypot(state.vx,state.vy)*110;
+    const bothAhead=state.port>0.02 && state.stbd>0.02;
+    const steerFrac=Math.min(1,Math.abs(state.steer)/activeBoat().propulsion.maxSteerDeg);
+
+    if(bothAhead && steerFrac>0.35 && speedKt>0.10){
+      const TURN_RADIUS_FT=activeBoat().maneuvering.fullPowerTurnRadiusFt;
+      const ftPerSec=speedKt*1.68781;
+      const targetYawDegPerSec=(ftPerSec/TURN_RADIUS_FT)*(180/Math.PI);
+
+      // IMPORTANT: positive steering produces positive omega in the existing
+      // force model. The previous version incorrectly negated this sign, causing
+      // the radius calibration to cancel the engine-generated yaw over time.
+      const signedTarget=Math.sign(state.steer)*targetYawDegPerSec*steerFrac;
+
+      // Converge smoothly toward the measured curvature while preserving transient
+      // response from throttle blips and external forces.
+      const TURN_CALIBRATION_RESPONSE=activeBoat().maneuvering.turnCalibrationResponse;
+      const blend=1-Math.exp(-TURN_CALIBRATION_RESPONSE*dt);
+      state.omega += (signedTarget-state.omega)*blend;
+    }
+
+    // Rotational damping:
+    // A 31-foot cruiser should continue to carry a low-speed pivot after a
+    // steering/throttle blip rather than immediately losing its yaw while
+    // retaining linear momentum. Keep baseline yaw damping quite low, then let
+    // translational water flow add a little extra damping as hull speed rises.
+    const translationalSpeed=Math.hypot(state.vx,state.vy);
+    const hydro=activeBoat().hydrodynamics;
+    const yawDamping=hydro.yawDampingBase + Math.min(hydro.yawDampingSpeedMax,translationalSpeed*hydro.yawDampingSpeedGain);
+    state.omega *= Math.exp(-yawDamping*dt);
 
     const prevX=state.x, prevY=state.y, prevA=state.a;
     const nextX=state.x + state.vx*dt;
@@ -1011,8 +1414,9 @@ input[type=range]{width:100%}
     requestAnimationFrame(loop);
   }
 
-  updateSteer(0);
-  updateEnvReadouts();
+  populateSetupControls();
+  renderMarina();
+  applyScenario(activeScenarioKey);
   render();
   requestAnimationFrame(loop);
 })();
