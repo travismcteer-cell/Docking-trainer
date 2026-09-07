@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Docking Trainer v40 — Configurable Boats & Marinas</title>
+<title>Docking Trainer v41 — Setup Screen</title>
 <style>
 :root{
   --water:#0b7892;
@@ -259,11 +259,66 @@ input[type=range]{width:100%;accent-color:#6db5ff}
 #impactFeedback.crash{background:rgba(145,34,34,.96)}
 #impactFeedback .impactSpeed{display:block;font-size:12px;font-weight:700;margin-top:2px;opacity:.92}
 
+
+
+#setupScreen{
+  display:none;
+  padding:14px;
+  background:linear-gradient(180deg,#102c36,#0a2028);
+}
+.setupShell{max-width:560px;margin:0 auto;display:grid;gap:12px}
+.setupTitle{font-size:20px;font-weight:900;margin-bottom:4px}
+.setupLead{font-size:12px;color:var(--muted);line-height:1.4}
+.setupActions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+#startSim{font-size:15px}
+#resumeSim{display:none}
+.tripleRow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+body.setup-mode #setupScreen{display:block;grid-column:1/-1}
+body.setup-mode #water,
+body.setup-mode #controls{display:none}
+body.setup-mode #app{grid-template-rows:auto 1fr}
+@media(min-width:900px){
+  body.setup-mode #app{grid-template-columns:1fr;grid-template-rows:auto 1fr;height:100vh}
+  body.setup-mode #setupScreen{overflow:auto}
+}
+@media(max-width:899px){
+  #setupScreen{padding:10px}
+  .setupShell{gap:8px}
+  .setupTitle{font-size:18px}
+  .setupActions{grid-template-columns:1fr}
+  .tripleRow{grid-template-columns:1fr}
+}
+
 </style>
 </head>
 <body>
 <div id="app">
 <header><strong>Docking Trainer — Configurable</strong><span id="status">Ready</span></header>
+
+<div id="setupScreen">
+  <div class="setupShell">
+    <div class="card">
+      <div class="setupTitle">Simulator Setup</div>
+      <div class="setupLead">Choose the boat, marina, starting position, and scenario before you begin. The live simulator screen keeps only the driving controls so it fits better on a phone.</div>
+      <div class="setupGrid" style="margin-top:10px">
+        <label>Boat<select id="boatSelect"></select></label>
+        <label>Marina<select id="marinaSelect"></select></label>
+        <label>Starting Position<select id="spawnSelect"></select></label>
+        <label>Scenario<select id="scenarioSelect"></select></label>
+        <div class="setupActions">
+          <button id="startSim">Start / Apply Setup</button>
+          <button id="resumeSim" type="button">Resume Current Simulation</button>
+        </div>
+      </div>
+      <div class="small" style="margin-top:8px">Wind and current remain adjustable from inside the simulator so you can still tweak conditions while practicing.</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Included spawn points</div>
+      <div class="small">Current marina presets include open water in the south basin, bow-in at a west-side finger dock, and alongside the gas dock.</div>
+    </div>
+  </div>
+</div>
 
 <div id="water"><div class="waterVignette"></div>
   <svg id="dockMap" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-label="Marina dock layout">
@@ -385,19 +440,7 @@ input[type=range]{width:100%;accent-color:#6db5ff}
     </div>
   </div>
 
-  <div class="card"><div class="row"><button id="reset">Reset</button><button id="approach">New Approach</button></div></div>
-
-  <div class="card">
-    <div class="label">Simulator Setup</div>
-    <div class="setupGrid">
-      <label>Boat<select id="boatSelect"></select></label>
-      <label>Marina<select id="marinaSelect"></select></label>
-      <label>Starting Position<select id="spawnSelect"></select></label>
-      <label>Scenario<select id="scenarioSelect"></select></label>
-      <button id="applySetup">Apply Setup</button>
-    </div>
-    <div class="small" style="margin-top:7px">Boat, marina, starting-position and scenario definitions are now data-driven. Add another entry in the configuration to expand the simulator.</div>
-  </div>
+  <div class="card"><div class="tripleRow"><button id="reset">Reset</button><button id="approach">New Approach</button><button id="openSetup">Setup</button></div></div>
 </div>
 </div>
 
@@ -696,6 +739,9 @@ input[type=range]{width:100%;accent-color:#6db5ff}
   const throttleHelp=document.getElementById('throttleHelp');
   const thrustP=document.getElementById('thrustP');
   const thrustS=document.getElementById('thrustS');
+  const startSimBtn=document.getElementById('startSim');
+  const resumeSimBtn=document.getElementById('resumeSim');
+  const openSetupBtn=document.getElementById('openSetup');
   const status=document.getElementById('status');
   const impactFeedback=document.getElementById('impactFeedback');
   const steer=document.getElementById('steer');
@@ -724,6 +770,21 @@ input[type=range]{width:100%;accent-color:#6db5ff}
 
   let state={x:.50,y:.86,a:180,vx:0,vy:0,omega:0,port:0,stbd:0,steer:0};
   let last=performance.now();
+  let hasStarted=false;
+
+  function showSetupScreen(){
+    document.body.classList.add('setup-mode');
+    populateSetupControls();
+    if(resumeSimBtn) resumeSimBtn.style.display=hasStarted?'block':'none';
+    status.textContent=hasStarted?'Setup':'Choose setup';
+  }
+
+  function showSimulator(){
+    document.body.classList.remove('setup-mode');
+    hasStarted=true;
+    if(resumeSimBtn) resumeSimBtn.style.display='block';
+    render();
+  }
 
   function engineText(v){
     v=+v;
@@ -967,31 +1028,28 @@ input[type=range]{width:100%;accent-color:#6db5ff}
     populateSpawnOptions(marinaKey,MARINAS[marinaKey]?.spawnPoints?.[0]?.id);
   });
 
-  // Boat selection is immediate: changing the dropdown switches the active
-  // boat profile and sprite without requiring a separate Apply click.
-  document.getElementById('boatSelect').addEventListener('change',()=>{
-    const selectedBoat=document.getElementById('boatSelect').value;
-    const sc=activeScenario();
-    activeBoatKey=selectedBoat;
-    if(sc) sc.boat=selectedBoat;
-    applyScenario(activeScenarioKey);
-  });
 
-  document.getElementById('applySetup').onclick=()=>{
+  startSimBtn.onclick=()=>{
     activeBoatKey=document.getElementById('boatSelect').value;
     activeMarinaKey=document.getElementById('marinaSelect').value;
     activeSpawnId=document.getElementById('spawnSelect').value || MARINAS[activeMarinaKey].spawnPoints[0].id;
     const selectedScenario=document.getElementById('scenarioSelect').value;
     const sc=SCENARIOS[selectedScenario];
-    // If the scenario points at the selected boat/marina use it directly;
-    // otherwise keep manual boat/marina choices and only borrow environment.
     activeScenarioKey=selectedScenario;
     if(sc){
       sc.boat=activeBoatKey;
       sc.marina=activeMarinaKey;
     }
     applyScenario(activeScenarioKey);
+    showSimulator();
   };
+
+  if(openSetupBtn){
+    openSetupBtn.onclick=()=>showSetupScreen();
+  }
+  if(resumeSimBtn){
+    resumeSimBtn.onclick=()=>showSimulator();
+  }
 
 
   // Dock geometry is shared conceptually with the SVG above.
@@ -1744,6 +1802,10 @@ input[type=range]{width:100%;accent-color:#6db5ff}
   function loop(now){
     let dt=Math.min((now-last)/1000,.03);
     last=now;
+    if(document.body.classList.contains('setup-mode')){
+      requestAnimationFrame(loop);
+      return;
+    }
     physics(dt);
     render();
     requestAnimationFrame(loop);
@@ -1752,6 +1814,7 @@ input[type=range]{width:100%;accent-color:#6db5ff}
   populateSetupControls();
   renderMarina();
   applyScenario(activeScenarioKey);
+  showSetupScreen();
   render();
   requestAnimationFrame(loop);
 })();
