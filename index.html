@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Docking Trainer v41 — Setup Screen</title>
+<title>Docking Trainer v43 — Spawn Clearance</title>
 <style>
 :root{
   --water:#0b7892;
@@ -310,8 +310,37 @@ body.setup-mode #app{grid-template-rows:auto 1fr}
           <button id="resumeSim" type="button">Resume Current Simulation</button>
         </div>
       </div>
-      <div class="small" style="margin-top:8px">Wind and current remain adjustable from inside the simulator so you can still tweak conditions while practicing.</div>
+      <div class="small" style="margin-top:8px">Wind and current are now configured here before you start the simulator. You can come back to Setup any time to change conditions.</div>
     </div>
+
+  <div class="card">
+    <div class="label">Environment</div>
+    <div class="envGrid">
+      <div class="envBox">
+        <div class="small"><b>WIND</b> · <span id="windVal">0 kt</span></div>
+        <input id="wind" type="range" min="0" max="25" value="0" step="1">
+        <div id="windDial" class="dirDial" aria-label="Wind direction dial">
+          <div class="dirTicks"><span class="n">N</span><span class="e">E</span><span class="s">S</span><span class="w">W</span></div>
+          <div id="windDirArrow" class="dirArrow"></div>
+        </div>
+        <div id="windDirVal" class="dirReadout">90° E</div>
+      </div>
+
+      <div class="envBox">
+        <div class="small"><b>CURRENT</b> · <span id="curVal">0.0 kt</span></div>
+        <input id="cur" type="range" min="0" max="4" value="0" step=".1">
+        <div id="curDial" class="dirDial" aria-label="Current direction dial">
+          <div class="dirTicks"><span class="n">N</span><span class="e">E</span><span class="s">S</span><span class="w">W</span></div>
+          <div id="curDirArrow" class="dirArrow"></div>
+        </div>
+        <div id="curDirVal" class="dirReadout">180° S</div>
+      </div>
+    </div>
+    <div class="small" style="margin-top:8px">
+      Drag either dial to set the direction the wind/current is moving <b>toward</b>.
+    </div>
+  </div>
+
 
     <div class="card">
       <div class="label">Included spawn points</div>
@@ -411,34 +440,6 @@ body.setup-mode #app{grid-template-rows:auto 1fr}
     </div>
   </div>
 
-
-  <div class="card">
-    <div class="label">Environment</div>
-    <div class="envGrid">
-      <div class="envBox">
-        <div class="small"><b>WIND</b> · <span id="windVal">0 kt</span></div>
-        <input id="wind" type="range" min="0" max="25" value="0" step="1">
-        <div id="windDial" class="dirDial" aria-label="Wind direction dial">
-          <div class="dirTicks"><span class="n">N</span><span class="e">E</span><span class="s">S</span><span class="w">W</span></div>
-          <div id="windDirArrow" class="dirArrow"></div>
-        </div>
-        <div id="windDirVal" class="dirReadout">90° E</div>
-      </div>
-
-      <div class="envBox">
-        <div class="small"><b>CURRENT</b> · <span id="curVal">0.0 kt</span></div>
-        <input id="cur" type="range" min="0" max="4" value="0" step=".1">
-        <div id="curDial" class="dirDial" aria-label="Current direction dial">
-          <div class="dirTicks"><span class="n">N</span><span class="e">E</span><span class="s">S</span><span class="w">W</span></div>
-          <div id="curDirArrow" class="dirArrow"></div>
-        </div>
-        <div id="curDirVal" class="dirReadout">180° S</div>
-      </div>
-    </div>
-    <div class="small" style="margin-top:8px">
-      Drag either dial to set the direction the wind/current is moving <b>toward</b>.
-    </div>
-  </div>
 
   <div class="card"><div class="tripleRow"><button id="reset">Reset</button><button id="approach">New Approach</button><button id="openSetup">Setup</button></div></div>
 </div>
@@ -629,7 +630,7 @@ body.setup-mode #app{grid-template-rows:auto 1fr}
       spawnPoints: [
         {id:"openWater", name:"Open Water — South Basin", x:.50,y:.86,heading:270},
         {id:"leftSlipBowIn", name:"Bow-In Slip — West Dock", x:.15,y:.395,heading:180},
-        {id:"gasDockAlongside", name:"Alongside — Gas Dock", x:.885,y:.60,heading:270}
+        {id:"gasDockAlongside", name:"Alongside — Gas Dock", x:.855,y:.60,heading:270}
       ]
     }
   };
@@ -963,6 +964,24 @@ body.setup-mode #app{grid-template-rows:auto 1fr}
     }
   }
 
+  function ensureSpawnClear(){
+    // Screen aspect ratio changes the collision hull's normalized footprint.
+    // If a configured spawn overlaps on a narrow phone/tablet viewport, gently
+    // nudge the boat away from the obstacle until it starts in clear water.
+    for(let i=0;i<24;i++){
+      const info=collisionInfoAt(state.x,state.y,state.a);
+      if(!info) return;
+      const nx=info.normal?.x ?? -1;
+      const ny=info.normal?.y ?? 0;
+      const m=activeMarina();
+      // Move roughly one foot per iteration in the obstacle-to-boat direction.
+      state.x += nx/(m.world.widthFt||180);
+      state.y += ny/(m.world.heightFt||120);
+      state.x=Math.max(.04,Math.min(.96,state.x));
+      state.y=Math.max(.06,Math.min(.94,state.y));
+    }
+  }
+
   function updateThrottleUI(){
     const single=activeBoat().propulsion.type==='singleSterndrive';
     portStack.style.display=single?'none':'grid';
@@ -998,6 +1017,9 @@ body.setup-mode #app{grid-template-rows:auto 1fr}
     }
     const spawn=selectedSpawn();
     state={x:spawn.x,y:spawn.y,a:spawn.heading,vx:0,vy:0,omega:0,port:0,stbd:0,steer:0};
+    ensureSpawnClear();
+    // A newly spawned boat should never inherit a stale contact indicator.
+    status.dataset.contact='0';
     windInput.value=sc.wind.speedKt;
     curInput.value=sc.current.speedKt;
     windDirDeg=sc.wind.directionDeg;
