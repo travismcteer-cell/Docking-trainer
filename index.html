@@ -372,6 +372,40 @@ body:not(.setup-mode) #controls .dirDial {
 }
 .fender.contact{transform:scaleY(.88)}
 
+
+/* Camera layer: visual-only pan/zoom. Simulation coordinates and collision geometry
+   remain in the original normalized marina world. */
+#worldLayer{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  z-index:2;
+  transform-origin:0 0;
+  will-change:transform;
+  pointer-events:none;
+}
+#worldLayer #boatWrap{pointer-events:none}
+#cameraToggle{
+  position:absolute;
+  right:12px;
+  top:12px;
+  z-index:10;
+  padding:7px 10px;
+  border-radius:9px;
+  border:1px solid rgba(255,255,255,.22);
+  background:rgba(7,37,46,.72);
+  color:#f3fbfd;
+  font-size:12px;
+  font-weight:800;
+  box-shadow:0 2px 7px rgba(0,0,0,.22);
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+@media(max-width:520px){
+  #cameraToggle{right:8px;top:8px;padding:6px 9px;font-size:11px}
+}
+
 </style>
 </head>
 <body>
@@ -445,37 +479,40 @@ body:not(.setup-mode) #controls .dirDial {
 </div>
 
 <div id="water"><div class="waterVignette"></div>
-  <svg id="dockMap" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-label="Marina dock layout">
-    <defs>
-      <pattern id="woodPlanks" width="24" height="24" patternUnits="userSpaceOnUse">
-        <rect width="24" height="24" fill="#bb8b58"/>
-        <path d="M0 0H24 M0 12H24" stroke="#d1a574" stroke-width="1"/>
-        <path d="M0 0V24 M12 0V24 M24 0V24" stroke="#8c623d" stroke-width=".8" opacity=".65"/>
-      </pattern>
-      <filter id="dockShadow" x="-30%" y="-30%" width="170%" height="180%">
-        <feDropShadow dx="4" dy="5" stdDeviation="3" flood-color="#001820" flood-opacity=".45"/>
-      </filter>
-    </defs>
-    <g id="marinaVisuals"></g>
-  </svg>
+  <div id="worldLayer">
+    <svg id="dockMap" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-label="Marina dock layout">
+      <defs>
+        <pattern id="woodPlanks" width="24" height="24" patternUnits="userSpaceOnUse">
+          <rect width="24" height="24" fill="#bb8b58"/>
+          <path d="M0 0H24 M0 12H24" stroke="#d1a574" stroke-width="1"/>
+          <path d="M0 0V24 M12 0V24 M24 0V24" stroke="#8c623d" stroke-width=".8" opacity=".65"/>
+        </pattern>
+        <filter id="dockShadow" x="-30%" y="-30%" width="170%" height="180%">
+          <feDropShadow dx="4" dy="5" stdDeviation="3" flood-color="#001820" flood-opacity=".45"/>
+        </filter>
+      </defs>
+      <g id="marinaVisuals"></g>
+    </svg>
+
+    <div id="boatWrap">
+      <div id="boat"></div>
+      <div id="cabin"></div>
+      <div class="drive" id="driveP"></div>
+      <div class="drive" id="driveS"></div>
+      <div class="thrustArrow" id="thrustP"></div>
+      <div class="thrustArrow" id="thrustS"></div>
+      <div class="fender portFender"></div><div class="fender portFender"></div><div class="fender portFender"></div><div class="fender portFender"></div>
+      <div class="fender stbdFender"></div><div class="fender stbdFender"></div><div class="fender stbdFender"></div><div class="fender stbdFender"></div>
+    </div>
+    <div id="lineBow" class="mooringLine"></div>
+    <div id="lineFwdSpring" class="mooringLine"></div>
+    <div id="lineAftSpring" class="mooringLine"></div>
+    <div id="lineStern" class="mooringLine"></div>
+  </div>
   <div id="windArrow">WIND →</div>
   <div id="currentArrow">CURRENT ↓</div>
+  <button id="cameraToggle" type="button">Overview</button>
   <div id="impactFeedback" aria-live="polite"></div>
-
-  <div id="boatWrap">
-    <div id="boat"></div>
-    <div id="cabin"></div>
-    <div class="drive" id="driveP"></div>
-    <div class="drive" id="driveS"></div>
-    <div class="thrustArrow" id="thrustP"></div>
-    <div class="thrustArrow" id="thrustS"></div>
-    <div class="fender portFender"></div><div class="fender portFender"></div><div class="fender portFender"></div><div class="fender portFender"></div>
-    <div class="fender stbdFender"></div><div class="fender stbdFender"></div><div class="fender stbdFender"></div><div class="fender stbdFender"></div>
-  </div>
-  <div id="lineBow" class="mooringLine"></div>
-  <div id="lineFwdSpring" class="mooringLine"></div>
-  <div id="lineAftSpring" class="mooringLine"></div>
-  <div id="lineStern" class="mooringLine"></div>
 </div>
 
 <div id="controls">
@@ -875,6 +912,8 @@ body:not(.setup-mode) #controls .dirDial {
   }
 
   const water=document.getElementById('water');
+  const worldLayer=document.getElementById('worldLayer');
+  const cameraToggle=document.getElementById('cameraToggle');
   const boat=document.getElementById('boatWrap');
   const driveP=document.getElementById('driveP');
   const driveS=document.getElementById('driveS');
@@ -949,6 +988,66 @@ body:not(.setup-mode) #controls .dirDial {
 
   let state={x:.50,y:.86,a:180,vx:0,vy:0,omega:0,port:0,stbd:0,steer:0};
   let last=performance.now();
+
+  // Visual camera only. It never changes state.x/y, collision geometry, thrust,
+  // docking-line forces, or any other simulation physics.
+  const CAMERA_CONFIG={
+    phoneZoom:1.65,
+    tabletZoom:1.35,
+    desktopZoom:1.18,
+    followLerp:0.18
+  };
+  let cameraMode=window.innerWidth<900?'follow':'overview';
+  let cameraView={scale:1,tx:0,ty:0,initialized:false};
+
+  function followCameraScale(){
+    if(window.innerWidth<=600) return CAMERA_CONFIG.phoneZoom;
+    if(window.innerWidth<900) return CAMERA_CONFIG.tabletZoom;
+    return CAMERA_CONFIG.desktopZoom;
+  }
+
+  function cameraTarget(){
+    const r=water.getBoundingClientRect();
+    if(!r.width||!r.height) return {scale:1,tx:0,ty:0};
+    if(cameraMode==='overview') return {scale:1,tx:0,ty:0};
+    const scale=followCameraScale();
+    const desiredX=r.width*0.50-scale*state.x*r.width;
+    const desiredY=r.height*0.50-scale*state.y*r.height;
+    const minX=r.width-scale*r.width;
+    const minY=r.height-scale*r.height;
+    return {
+      scale,
+      tx:Math.max(minX,Math.min(0,desiredX)),
+      ty:Math.max(minY,Math.min(0,desiredY))
+    };
+  }
+
+  function updateCamera(force=false){
+    const target=cameraTarget();
+    if(force||!cameraView.initialized){
+      cameraView={...target,initialized:true};
+    }else{
+      const k=CAMERA_CONFIG.followLerp;
+      cameraView.scale += (target.scale-cameraView.scale)*k;
+      cameraView.tx += (target.tx-cameraView.tx)*k;
+      cameraView.ty += (target.ty-cameraView.ty)*k;
+    }
+    worldLayer.style.transform=`translate3d(${cameraView.tx}px,${cameraView.ty}px,0) scale(${cameraView.scale})`;
+    cameraToggle.textContent=cameraMode==='follow'?'Overview':'Follow Boat';
+    cameraToggle.setAttribute('aria-pressed',cameraMode==='overview'?'true':'false');
+  }
+
+  cameraToggle.addEventListener('click',e=>{
+    e.preventDefault();
+    cameraMode=cameraMode==='follow'?'overview':'follow';
+    cameraView.initialized=false;
+    updateCamera(true);
+  });
+
+  window.addEventListener('resize',()=>{
+    cameraView.initialized=false;
+    updateCamera(true);
+  });
   let hasStarted=false;
 
   function showSetupScreen(){
@@ -963,6 +1062,8 @@ body:not(.setup-mode) #controls .dirDial {
     document.body.classList.remove('setup-mode');
     hasStarted=true;
     if(resumeSimBtn) resumeSimBtn.style.display='block';
+    cameraView.initialized=false;
+    updateCamera(true);
     render();
   }
 
@@ -1068,24 +1169,13 @@ body:not(.setup-mode) #controls .dirDial {
     return dirs[Math.round(((deg%360)+360)%360/45)%8];
   }
 
-  function directionArrow(deg){
-    const arrows=['↑','↗','→','↘','↓','↙','←','↖'];
-    return arrows[Math.round((((deg%360)+360)%360)/45)%8];
-  }
-
   function updateEnvReadouts(){
-    const windKt=(+windInput.value).toFixed(0);
-    const curKt=(+curInput.value).toFixed(1);
-    document.getElementById('windVal').textContent=windKt+' kt';
-    document.getElementById('curVal').textContent=curKt+' kt';
+    document.getElementById('windVal').textContent=(+windInput.value).toFixed(0)+' kt';
+    document.getElementById('curVal').textContent=(+curInput.value).toFixed(1)+' kt';
     document.getElementById('windDirVal').textContent=Math.round(windDirDeg)+'° '+cardinalLabel(windDirDeg);
     document.getElementById('curDirVal').textContent=Math.round(curDirDeg)+'° '+cardinalLabel(curDirDeg);
     windDirArrow.style.transform='translate(-50%,-100%) rotate('+windDirDeg+'deg)';
     curDirArrow.style.transform='translate(-50%,-100%) rotate('+curDirDeg+'deg)';
-    const windOverlay=document.getElementById('windArrow');
-    const curOverlay=document.getElementById('currentArrow');
-    if(windOverlay) windOverlay.textContent='WIND '+directionArrow(windDirDeg)+' '+windKt+' kt';
-    if(curOverlay) curOverlay.textContent='CURRENT '+directionArrow(curDirDeg)+' '+curKt+' kt';
   }
 
   function angleFromPointer(el,e){
@@ -1186,7 +1276,7 @@ body:not(.setup-mode) #controls .dirDial {
       : 'Hold for power. Release = neutral. 10% approximates idle-ahead/idle-reverse; 25% is a stronger docking blip. The centre column controls both engines.';
   }
 
-  function applyScenario(key=activeScenarioKey,{preserveEnvironment=false}={}){
+  function applyScenario(key=activeScenarioKey){
     activeScenarioKey=key;
     const sc=activeScenario();
     activeBoatKey=sc.boat;
@@ -1210,12 +1300,10 @@ body:not(.setup-mode) #controls .dirDial {
     ensureSpawnClear();
     // A newly spawned boat should never inherit a stale contact indicator.
     status.dataset.contact='0';
-    if(!preserveEnvironment){
-      windInput.value=sc.wind.speedKt;
-      curInput.value=sc.current.speedKt;
-      windDirDeg=sc.wind.directionDeg;
-      curDirDeg=sc.current.directionDeg;
-    }
+    windInput.value=sc.wind.speedKt;
+    curInput.value=sc.current.speedKt;
+    windDirDeg=sc.wind.directionDeg;
+    curDirDeg=sc.current.directionDeg;
     updateSteer(0);
     setThrottle('port',0);
     setThrottle('stbd',0);
@@ -1223,9 +1311,11 @@ body:not(.setup-mode) #controls .dirDial {
     updateEnvReadouts();
     updateThrottleUI();
     populateSetupControls();
+    cameraView.initialized=false;
+    updateCamera(true);
   }
 
-  function reset(){ applyScenario(activeScenarioKey,{preserveEnvironment:true}); }
+  function reset(){ applyScenario(activeScenarioKey); }
 
   document.getElementById('reset').onclick=reset;
   document.getElementById('approach').onclick=()=>{
@@ -1247,16 +1337,6 @@ body:not(.setup-mode) #controls .dirDial {
     renderSetupPreview(document.getElementById('marinaSelect').value,document.getElementById('spawnSelect').value);
   });
 
-  document.getElementById('scenarioSelect').addEventListener('change',()=>{
-    const sc=SCENARIOS[document.getElementById('scenarioSelect').value];
-    if(!sc) return;
-    windInput.value=sc.wind.speedKt;
-    curInput.value=sc.current.speedKt;
-    windDirDeg=sc.wind.directionDeg;
-    curDirDeg=sc.current.directionDeg;
-    updateEnvReadouts();
-  });
-
 
   startSimBtn.onclick=()=>{
     activeBoatKey=document.getElementById('boatSelect').value;
@@ -1269,7 +1349,7 @@ body:not(.setup-mode) #controls .dirDial {
       sc.boat=activeBoatKey;
       sc.marina=activeMarinaKey;
     }
-    applyScenario(activeScenarioKey,{preserveEnvironment:true});
+    applyScenario(activeScenarioKey);
     showSimulator();
   };
 
@@ -2033,6 +2113,7 @@ body:not(.setup-mode) #controls .dirDial {
 
   function render(){
     const viewRect=water.getBoundingClientRect();
+    updateCamera(false);
     const boatDims=boatDimsPx(viewRect);
     // Snap the raster sprite to the physical-pixel grid. This substantially
     // reduces the apparent size "pulsing" seen in iPad Safari while rotating.
