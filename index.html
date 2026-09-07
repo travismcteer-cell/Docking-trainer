@@ -289,6 +289,34 @@ body.setup-mode #app{grid-template-rows:auto 1fr}
   .tripleRow{grid-template-columns:1fr}
 }
 
+
+/* Mobile game-mode gesture handling.
+   The marina itself captures touch completely so dragging/holding cannot pan or zoom
+   the browser. Controls keep single-finger interaction/scrolling but suppress
+   double-tap zoom and other browser gestures. The Setup screen remains normal. */
+body:not(.setup-mode) #water,
+body:not(.setup-mode) #water * {
+  touch-action: none;
+  -ms-touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+body:not(.setup-mode) #controls,
+body:not(.setup-mode) #controls * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+body:not(.setup-mode) #controls button,
+body:not(.setup-mode) #controls input,
+body:not(.setup-mode) #controls .dirDial {
+  touch-action: manipulation;
+  -ms-touch-action: manipulation;
+}
+
 </style>
 </head>
 <body>
@@ -1820,6 +1848,33 @@ body.setup-mode #app{grid-template-rows:auto 1fr}
         (activeLines?' · Lines '+activeLines:'');
     }
   }
+
+
+  // iOS Safari still exposes proprietary gesture events even with viewport and
+  // touch-action rules. Suppress multi-touch browser gestures only while the
+  // simulator is active; Setup keeps normal browser behavior.
+  function simulatorIsActive(){
+    return !document.body.classList.contains('setup-mode');
+  }
+
+  ['gesturestart','gesturechange','gestureend'].forEach(type=>{
+    document.addEventListener(type,e=>{
+      if(simulatorIsActive()) e.preventDefault();
+    },{passive:false});
+  });
+
+  document.addEventListener('touchmove',e=>{
+    if(simulatorIsActive() && e.touches && e.touches.length>1){
+      e.preventDefault();
+    }
+  },{passive:false});
+
+  document.addEventListener('dblclick',e=>{
+    if(!simulatorIsActive()) return;
+    if(e.target.closest('#water') || e.target.closest('#controls')){
+      e.preventDefault();
+    }
+  },{passive:false});
 
   function loop(now){
     let dt=Math.min((now-last)/1000,.03);
