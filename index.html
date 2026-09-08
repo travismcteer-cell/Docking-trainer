@@ -1151,8 +1151,8 @@ body.sim-mode{
       labels: [],
       spawnPoints: [
         {id:"openWater", name:"Open Water — South Basin", x:.50,y:.88,heading:270},
-        {id:"innerSlipBowIn", name:"Inner Pontoon — Bow In", x:.260,y:.425,heading:180},
-        {id:"innerSlipBowOut", name:"Inner Pontoon — Bow Out", x:.700,y:.425,heading:180},
+        {id:"innerSlipBowIn", name:"Inner Pontoon — Bow In", x:.425,y:.425,heading:180},
+        {id:"innerSlipBowOut", name:"Inner Pontoon — Bow Out", x:.545,y:.425,heading:180},
         {id:"mainWharfAlongside", name:"Alongside — Main Wharf", x:.50,y:.245,heading:180}
       ]
     }
@@ -1199,7 +1199,7 @@ body.sim-mode{
 
   // Scripted, predictable marina traffic. These boats follow fixed routes
   // through open water rather than making autonomous navigation decisions.
-  // level: 1=Light, 2=Moderate, 3=Busy.
+  // level selects the single route used at each setting: 1=Light, 2=Moderate, 3=Busy.
   const MOVING_TRAFFIC_ROUTES={
     referenceMarina:[
       {
@@ -1351,7 +1351,7 @@ body.sim-mode{
       number: 7,
       name: "Live Traffic Departure",
       type: "departure",
-      description: "Start secured bow-out on an inner pontoon, cast off into a crowded double-T marina, and time your departure around moving traffic while wind and current work against you.",
+      description: "Start secured bow-out on an inner pontoon, cast off into a crowded double-T marina, and time your departure around a moving boat while wind and current work against you.",
       marina: "doubleTMarina",
       boat: "cruiser31",
       spawnId: "innerSlipBowOut",
@@ -2431,9 +2431,20 @@ body.sim-mode{
 
   function movingTrafficRoutes(marinaKey=activeMarinaKey,density=activeMovingTrafficDensity){
     const rank=MOVING_TRAFFIC_LEVEL[density]||0;
-    return (MOVING_TRAFFIC_ROUTES[marinaKey]||[])
-      .filter(route=>route.level<=rank)
-      .map(route=>({...route,points:route.points.map(p=>[p[0],p[1]])}));
+    if(rank<=0) return [];
+
+    const routes=MOVING_TRAFFIC_ROUTES[marinaKey]||[];
+
+    // These marina environments are intentionally compact, so only one
+    // moving traffic boat is active at a time. The density selector chooses
+    // the route/difficulty rather than adding additional moving boats.
+    const route=
+      routes.find(r=>r.level===rank) ||
+      [...routes].reverse().find(r=>r.level<=rank) ||
+      routes[0];
+
+    if(!route) return [];
+    return [{...route,points:route.points.map(p=>[p[0],p[1]])}];
   }
 
   function routeSegmentLengths(route,marina=activeMarina()){
