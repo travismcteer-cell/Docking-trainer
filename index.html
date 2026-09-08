@@ -1225,6 +1225,49 @@ body.home-mode #homeScreen, body.levels-mode #levelScreen{overflow:auto}
       current: {speedKt:0,directionDeg:180},
       target: {x:.205,y:.365,w:.125,h:.120,label:"INNER SLIP",style:"dock"},
       completionSpeedKt: .75
+    },
+    westSlipCrossCurrent: {
+      number: 4,
+      name: "West Slip Cross-Current",
+      type: "arrival",
+      description: "Bring the 310 into the west-side slip with moderate traffic, an 8 kt crosswind, and a noticeable current setting you toward the dock.",
+      marina: "referenceMarina",
+      boat: "cruiser31",
+      spawnId: "openWater",
+      otherBoats: "medium",
+      wind: {speedKt:8,directionDeg:90},
+      current: {speedKt:.4,directionDeg:270},
+      target: {x:.095,y:.340,w:.135,h:.105,label:"WEST SLIP",style:"dock"},
+      completionSpeedKt: .70
+    },
+    doubleTTightDeparture: {
+      number: 5,
+      name: "Double-T Tight Departure",
+      type: "departure",
+      description: "Start secured bow-out on an inner pontoon. Cast off into heavy marina traffic, then work through wind and current to reach the south basin.",
+      marina: "doubleTMarina",
+      boat: "inboard30",
+      spawnId: "innerSlipBowOut",
+      otherBoats: "high",
+      wind: {speedKt:12,directionDeg:270},
+      current: {speedKt:.5,directionDeg:90},
+      startLines: ["bow","stern"],
+      startFenders: "port",
+      target: {x:.385,y:.815,w:.230,h:.145,label:"SOUTH BASIN",style:"exit"}
+    },
+    gasDockSqueeze: {
+      number: 6,
+      name: "Gas Dock Squeeze",
+      type: "arrival",
+      description: "Thread the single-engine bowrider into the open section of a crowded gas dock while a strong crosswind and current push across your approach.",
+      marina: "referenceMarina",
+      boat: "bowrider21",
+      spawnId: "openWater",
+      otherBoats: "high",
+      wind: {speedKt:15,directionDeg:180},
+      current: {speedKt:.8,directionDeg:270},
+      target: {x:.805,y:.430,w:.095,h:.255,label:"GAS DOCK GAP",style:"dock"},
+      completionSpeedKt: .60
     }
   };
 
