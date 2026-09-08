@@ -1153,6 +1153,7 @@ body.sim-mode{
         {id:"openWater", name:"Open Water — South Basin", x:.50,y:.88,heading:270},
         {id:"innerSlipBowIn", name:"Inner Pontoon — Bow In", x:.425,y:.425,heading:180},
         {id:"innerSlipBowOut", name:"Inner Pontoon — Bow Out", x:.545,y:.425,heading:180},
+        {id:"level7Departure", name:"Level 7 Departure Start", x:.275,y:.605,heading:0},
         {id:"mainWharfAlongside", name:"Alongside — Main Wharf", x:.50,y:.245,heading:180}
       ]
     }
@@ -1203,30 +1204,36 @@ body.sim-mode{
   const MOVING_TRAFFIC_ROUTES={
     referenceMarina:[
       {
-        id:"refTransitA", level:1, boatKey:"bowrider21", speedKt:2.6, phase:.18,
-        points:[[.42,.90],[.52,.80],[.64,.70],[.74,.58],[.80,.44]]
+        id:"refDepart", level:1, boatKey:"bowrider21", speedKt:2.3,
+        behavior:"exit",
+        points:[[.80,.46],[.74,.56],[.64,.66],[.52,.76],[.40,.88],[.32,1.06]]
       },
       {
-        id:"refTransitB", level:2, boatKey:"inboard30", speedKt:2.2, phase:.62,
-        points:[[.34,.84],[.46,.74],[.60,.66],[.73,.57]]
+        id:"refArrive", level:2, boatKey:"inboard30", speedKt:2.0,
+        behavior:"arrive",
+        points:[[.34,1.06],[.42,.90],[.54,.78],[.66,.66],[.76,.55],[.80,.45]]
       },
       {
-        id:"refTransitC", level:3, boatKey:"bowrider21", speedKt:3.0, phase:.38,
-        points:[[.30,.91],[.44,.84],[.60,.78],[.74,.69],[.82,.58]]
+        id:"refDepartFast", level:3, boatKey:"bowrider21", speedKt:2.8,
+        behavior:"exit",
+        points:[[.79,.56],[.72,.64],[.62,.72],[.50,.80],[.38,.90],[.30,1.06]]
       }
     ],
     doubleTMarina:[
       {
-        id:"dtTransitA", level:1, boatKey:"bowrider21", speedKt:2.8, phase:.18,
-        points:[[.50,.24],[.50,.40],[.50,.57],[.50,.74],[.50,.91]]
+        id:"dtDepart", level:1, boatKey:"bowrider21", speedKt:2.4,
+        behavior:"exit",
+        points:[[.40,.44],[.44,.56],[.46,.68],[.47,.82],[.47,1.06]]
       },
       {
-        id:"dtTransitB", level:2, boatKey:"inboard30", speedKt:2.2, phase:.66,
-        points:[[.40,.82],[.46,.70],[.53,.58],[.60,.46],[.60,.28]]
+        id:"dtArrive", level:2, boatKey:"inboard30", speedKt:2.0,
+        behavior:"arrive",
+        points:[[.53,1.06],[.53,.84],[.54,.68],[.56,.54],[.59,.43],[.60,.30]]
       },
       {
-        id:"dtTransitC", level:3, boatKey:"bowrider21", speedKt:3.1, phase:.42,
-        points:[[.60,.88],[.55,.75],[.46,.63],[.40,.50],[.40,.30]]
+        id:"dtDepartBusy", level:3, boatKey:"bowrider21", speedKt:2.7,
+        behavior:"exit",
+        points:[[.60,.43],[.57,.54],[.55,.68],[.54,.82],[.54,1.06]]
       }
     ]
   };
@@ -1287,7 +1294,7 @@ body.sim-mode{
       wind: {speedKt:0,directionDeg:90},
       current: {speedKt:0,directionDeg:180},
       startLines: ["bow","stern"],
-      startFenders: "stbd",
+      startFenders: "port",
       target: {x:.350,y:.805,w:.330,h:.145,label:"OPEN WATER",style:"exit"}
     },
     doubleTCrosswind: {
@@ -1330,7 +1337,7 @@ body.sim-mode{
       wind: {speedKt:12,directionDeg:270},
       current: {speedKt:.5,directionDeg:90},
       startLines: ["bow","stern"],
-      startFenders: "port",
+      startFenders: "stbd",
       target: {x:.385,y:.815,w:.230,h:.145,label:"SOUTH BASIN",style:"exit"}
     },
     gasDockSqueeze: {
@@ -1351,11 +1358,11 @@ body.sim-mode{
       number: 7,
       name: "Live Traffic Departure",
       type: "departure",
-      description: "Start secured bow-out on an inner pontoon, cast off into a crowded double-T marina, and time your departure around a moving boat while wind and current work against you.",
+      description: "Depart bow-out from an inner slip while another boat leaves the marina ahead of you on the starboard side of the channel. Time your move, stay clear, and reach the south exit.",
       marina: "doubleTMarina",
       boat: "cruiser31",
-      spawnId: "innerSlipBowOut",
-      otherBoats: "high",
+      spawnId: "level7Departure",
+      otherBoats: "medium",
       movingTraffic: "busy",
       wind: {speedKt:16,directionDeg:270},
       current: {speedKt:.8,directionDeg:90},
@@ -2480,21 +2487,21 @@ body.sim-mode{
     const dx=(b[0]-a[0])*marina.world.widthFt;
     const dy=(b[1]-a[1])*marina.world.heightFt;
     ob.heading=Math.atan2(dy,dx)*180/Math.PI;
-    if(ob.direction<0) ob.heading=(ob.heading+180)%360;
     ob.segment=seg;
   }
 
   function rebuildMovingTraffic(){
-    activeMovingBoats=movingTrafficRoutes().map((route,index)=>{
+    activeMovingBoats=movingTrafficRoutes().map(route=>{
       const ob={
         id:route.id,
         boatKey:route.boatKey,
         speedKt:route.speedKt,
         route,
-        direction:index%2===0?1:-1,
-        progress:route.phase??0
+        direction:1,
+        progress:0,
+        finished:false
       };
-      placeMovingBoatAtProgress(ob,ob.progress);
+      placeMovingBoatAtProgress(ob,0);
       return ob;
     });
 
@@ -2513,19 +2520,16 @@ body.sim-mode{
     if(!activeMovingBoats.length || dt<=0) return;
     const marina=activeMarina();
     for(const ob of activeMovingBoats){
+      if(ob.finished) continue;
       const metrics=routeSegmentLengths(ob.route,marina);
       if(!metrics.total) continue;
       const speedFps=(ob.speedKt||2.5)/0.592484;
       const delta=speedFps*dt/metrics.total;
-      ob.progress+=delta*ob.direction;
+      ob.progress+=delta;
 
-      // Ping-pong at the route ends so traffic stays in the marina.
       if(ob.progress>=1){
-        ob.progress=2-ob.progress;
-        ob.direction=-1;
-      }else if(ob.progress<=0){
-        ob.progress=-ob.progress;
-        ob.direction=1;
+        ob.progress=1;
+        ob.finished=true;
       }
       placeMovingBoatAtProgress(ob,ob.progress);
     }
