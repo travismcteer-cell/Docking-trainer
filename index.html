@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Docking Trainer — Practice & Play</title>
+<title>Docking Trainer — Fixed Marina Scale</title>
 <style>
 :root{
   --water:#0b7892;
@@ -377,9 +377,10 @@ body.sim-mode #controls .dirDial {
    remain in the original normalized marina world. */
 #worldLayer{
   position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
+  left:0;
+  top:0;
+  width:1000px;
+  height:600px;
   z-index:2;
   transform-origin:0 0;
   will-change:transform;
@@ -1153,7 +1154,7 @@ body.sim-mode{
         {id:"openWater", name:"Open Water — South Basin", x:.50,y:.88,heading:270},
         {id:"innerSlipBowIn", name:"Inner Pontoon — Bow In", x:.425,y:.425,heading:180},
         {id:"innerSlipBowOut", name:"Inner Pontoon — Bow Out", x:.545,y:.425,heading:180},
-        {id:"level7Departure", name:"Level 7 Departure Start", x:.275,y:.605,heading:0},
+        {id:"level7Departure", name:"Level 7 Departure Start", x:.300,y:.605,heading:0},
         {id:"mainWharfAlongside", name:"Alongside — Main Wharf", x:.50,y:.245,heading:180}
       ]
     }
@@ -1366,7 +1367,7 @@ body.sim-mode{
       movingTraffic: "busy",
       wind: {speedKt:16,directionDeg:270},
       current: {speedKt:.8,directionDeg:90},
-      startLines: ["bow","stern"],
+      startLines: ["bow","aftSpring","stern"],
       startFenders: "port",
       target: {x:.385,y:.835,w:.230,h:.120,label:"SOUTH EXIT",style:"exit"}
     }
@@ -1648,6 +1649,14 @@ body.sim-mode{
     desktopZoom:1.18,
     followLerp:0.18
   };
+
+  // The marina is always rendered in a fixed 1000 x 600 (5:3) world.
+  // Screen shape changes only how much of that world the viewport can see.
+  const WORLD_CANVAS={width:1000,height:600};
+
+  function worldBaseRect(){
+    return {width:WORLD_CANVAS.width,height:WORLD_CANVAS.height};
+  }
   let cameraMode=window.innerWidth<900?'follow':'overview';
   let cameraView={scale:1,tx:0,ty:0,initialized:false};
 
@@ -1658,19 +1667,41 @@ body.sim-mode{
   }
 
   function cameraTarget(){
-    const r=water.getBoundingClientRect();
-    if(!r.width||!r.height) return {scale:1,tx:0,ty:0};
-    if(cameraMode==='overview') return {scale:1,tx:0,ty:0};
-    const scale=followCameraScale();
-    const desiredX=r.width*0.50-scale*state.x*r.width;
-    const desiredY=r.height*0.50-scale*state.y*r.height;
-    const minX=r.width-scale*r.width;
-    const minY=r.height-scale*r.height;
-    return {
-      scale,
-      tx:Math.max(minX,Math.min(0,desiredX)),
-      ty:Math.max(minY,Math.min(0,desiredY))
-    };
+    const viewport=water.getBoundingClientRect();
+    if(!viewport.width||!viewport.height) return {scale:1,tx:0,ty:0};
+
+    const worldW=WORLD_CANVAS.width;
+    const worldH=WORLD_CANVAS.height;
+
+    // Uniform fit preserves the marina's 5:3 proportions on every device.
+    const overviewScale=Math.min(viewport.width/worldW,viewport.height/worldH);
+
+    if(cameraMode==='overview'){
+      const scale=overviewScale;
+      return {
+        scale,
+        tx:(viewport.width-worldW*scale)/2,
+        ty:(viewport.height-worldH*scale)/2
+      };
+    }
+
+    // Follow zoom is relative to the properly fitted overview scale.
+    const scale=overviewScale*followCameraScale();
+    const scaledW=worldW*scale;
+    const scaledH=worldH*scale;
+
+    const desiredX=viewport.width*0.50-scale*state.x*worldW;
+    const desiredY=viewport.height*0.50-scale*state.y*worldH;
+
+    const tx=scaledW<=viewport.width
+      ? (viewport.width-scaledW)/2
+      : Math.max(viewport.width-scaledW,Math.min(0,desiredX));
+
+    const ty=scaledH<=viewport.height
+      ? (viewport.height-scaledH)/2
+      : Math.max(viewport.height-scaledH,Math.min(0,desiredY));
+
+    return {scale,tx,ty};
   }
 
   function updateCamera(force=false){
@@ -1908,13 +1939,32 @@ body.sim-mode{
     return dirs[Math.round(((deg%360)+360)%360/45)%8];
   }
 
+  function directionArrow(deg){
+    const arrows=['↑','↗','→','↘','↓','↙','←','↖'];
+    return arrows[Math.round(((deg%360)+360)%360/45)%8];
+  }
+
   function updateEnvReadouts(){
-    document.getElementById('windVal').textContent=(+windInput.value).toFixed(0)+' kt';
-    document.getElementById('curVal').textContent=(+curInput.value).toFixed(1)+' kt';
+    const windKt=+windInput.value;
+    const curKt=+curInput.value;
+
+    document.getElementById('windVal').textContent=windKt.toFixed(0)+' kt';
+    document.getElementById('curVal').textContent=curKt.toFixed(1)+' kt';
     document.getElementById('windDirVal').textContent=Math.round(windDirDeg)+'° '+cardinalLabel(windDirDeg);
     document.getElementById('curDirVal').textContent=Math.round(curDirDeg)+'° '+cardinalLabel(curDirDeg);
     windDirArrow.style.transform='translate(-50%,-100%) rotate('+windDirDeg+'deg)';
     curDirArrow.style.transform='translate(-50%,-100%) rotate('+curDirDeg+'deg)';
+
+    // Live simulator overlays. These now display the SAME direction values
+    // used by screenDir() in the physics engine.
+    const liveWind=document.getElementById('windArrow');
+    const liveCurrent=document.getElementById('currentArrow');
+    if(liveWind){
+      liveWind.textContent=`WIND ${directionArrow(windDirDeg)} ${windKt.toFixed(0)} kt`;
+    }
+    if(liveCurrent){
+      liveCurrent.textContent=`CURRENT ${directionArrow(curDirDeg)} ${curKt.toFixed(1)} kt`;
+    }
   }
 
   function angleFromPointer(el,e){
@@ -2535,7 +2585,7 @@ body.sim-mode{
     }
   }
 
-  function renderMovingBoats(r=water.getBoundingClientRect()){
+  function renderMovingBoats(r=worldBaseRect()){
     if(!movingBoatsLayer || !r.width || !r.height) return;
     const dpr=window.devicePixelRatio||1;
     const snap=v=>Math.round(v*dpr)/dpr;
@@ -2602,7 +2652,7 @@ body.sim-mode{
     return obstacleHullPolyPx(ob,r).map(p=>({x:p.x/r.width,y:p.y/r.height}));
   }
 
-  function renderObstacleBoats(r=water.getBoundingClientRect()){
+  function renderObstacleBoats(r=worldBaseRect()){
     if(!obstacleBoatsLayer || !r.width || !r.height) return;
     const dpr=window.devicePixelRatio||1;
     const snap=v=>Math.round(v*dpr)/dpr;
@@ -2755,7 +2805,7 @@ body.sim-mode{
   }
 
   function collisionInfoAt(x,y,aDeg){
-    const r=water.getBoundingClientRect();
+    const r=worldBaseRect();
     if(!r.width || !r.height) return null;
     const hull=hullPolyPx(x,y,aDeg,r);
     const m=activeMarina();
@@ -2892,7 +2942,7 @@ body.sim-mode{
   }
 
   function attachLine(type){
-    const r=water.getBoundingClientRect();
+    const r=worldBaseRect();
     const choice=chooseAttachment(type,r);
     if(!choice){
       lineNotice='Move closer to the dock to attach '+lineDefs[type].label;
@@ -2961,7 +3011,7 @@ body.sim-mode{
   }
 
   function physics(dt){
-    const r=water.getBoundingClientRect();
+    const r=worldBaseRect();
     if(!r.width || !r.height) return;
 
     const ang=state.a*Math.PI/180;
@@ -3372,7 +3422,7 @@ body.sim-mode{
   }
 
   function render(){
-    const viewRect=water.getBoundingClientRect();
+    const viewRect=worldBaseRect();
     updateCamera(false);
     const boatDims=boatDimsPx(viewRect);
     renderObstacleBoats(viewRect);
@@ -3470,7 +3520,7 @@ body.sim-mode{
 
 
     // Draw docking lines in world coordinates.
-    const rr=water.getBoundingClientRect();
+    const rr=worldBaseRect();
     for(const type of Object.keys(lineState)){
       const ls=lineState[type], el=lineEls[type];
       if(!ls.active){
