@@ -178,6 +178,12 @@ input[type=range]{width:100%;accent-color:#6db5ff}
   color:#eef8fa;background:#17313a;font:inherit
 }
 
+/* Simulator control layout wrapper. Desktop keeps the existing vertical stack.
+   On mobile we switch to two columns so throttle/fenders and steering/lines
+   fit onscreen without excessive scrolling. */
+#controlColumns{display:grid;grid-template-columns:1fr;gap:10px}
+.controlCol{display:grid;gap:10px;align-content:start}
+
 @media(min-width:900px){
  #app{grid-template-columns:1fr 330px;grid-template-rows:auto 1fr;height:100vh}
  header{grid-column:1/-1}
@@ -193,9 +199,17 @@ input[type=range]{width:100%;accent-color:#6db5ff}
   #app{grid-template-rows:auto 52vh auto}
   #water{min-height:52vh}
   #controls{gap:7px;padding:7px}
+  #controlColumns{grid-template-columns:1fr 1fr;gap:7px;align-items:start}
+  .controlCol{gap:7px}
   .card{padding:8px;border-radius:10px}
   .enginePad{gap:5px}
   .engineBtn{padding:10px 3px;font-size:13px}
+  .lineButtons{gap:5px}
+  .lineToggle{padding:9px 4px;font-size:12px}
+  .row{gap:6px}
+  .row button{padding:9px 4px;font-size:12px}
+  .thrusterBtn{padding:10px 5px;font-size:12px}
+  .fenderToggle{padding:10px 5px;font-size:12px}
 }
 
 
@@ -891,84 +905,88 @@ body.sim-mode{
       </div>
     </div>
   </div>
-  <div class="card">
-    <div class="label">Momentary Throttle / Shift</div>
-    <div class="throttles">
-      <div class="stack" id="portStack">
-        <div class="small" style="text-align:center" id="portLabel"><b>PORT</b></div>
-        <div class="enginePad" data-engine="port">
-          <button class="engineBtn ahead" data-power="25">25 FWD</button>
-          <button class="engineBtn ahead" data-power="10">10 FWD</button>
-          <button class="engineBtn reverse" data-power="-10">10 REV</button>
-          <button class="engineBtn reverse" data-power="-25">25 REV</button>
+  <div id="controlColumns">
+    <div class="controlCol" id="controlColLeft">
+      <div class="card">
+        <div class="label">Momentary Throttle / Shift</div>
+        <div class="throttles">
+          <div class="stack" id="portStack">
+            <div class="small" style="text-align:center" id="portLabel"><b>PORT</b></div>
+            <div class="enginePad" data-engine="port">
+              <button class="engineBtn ahead" data-power="25">25 FWD</button>
+              <button class="engineBtn ahead" data-power="10">10 FWD</button>
+              <button class="engineBtn reverse" data-power="-10">10 REV</button>
+              <button class="engineBtn reverse" data-power="-25">25 REV</button>
+            </div>
+          </div>
+          <div class="stack" id="bothStack">
+            <div class="small" style="text-align:center" id="bothLabel"><b>BOTH</b></div>
+            <div class="enginePad" data-engine="both">
+              <button class="engineBtn ahead" data-power="25">25 FWD</button>
+              <button class="engineBtn ahead" data-power="10">10 FWD</button>
+              <button class="engineBtn reverse" data-power="-10">10 REV</button>
+              <button class="engineBtn reverse" data-power="-25">25 REV</button>
+            </div>
+          </div>
+          <div class="stack" id="stbdStack">
+            <div class="small" style="text-align:center" id="stbdLabel"><b>STARBOARD</b></div>
+            <div class="enginePad" data-engine="stbd">
+              <button class="engineBtn ahead" data-power="25">25 FWD</button>
+              <button class="engineBtn ahead" data-power="10">10 FWD</button>
+              <button class="engineBtn reverse" data-power="-10">10 REV</button>
+              <button class="engineBtn reverse" data-power="-25">25 REV</button>
+            </div>
+          </div>
+        </div>
+        <div class="small" id="throttleHelp" style="margin-top:8px">Hold for power. Release = neutral. 10% approximates idle-ahead/idle-reverse; 25% is a stronger docking blip. The centre column controls both engines.</div>
+      </div>
+
+      <div class="card">
+        <div class="label">Fenders</div>
+        <div class="row">
+          <button class="fenderToggle" id="portFenders">PORT FENDERS</button>
+          <button class="fenderToggle" id="stbdFenders">STBD FENDERS</button>
+        </div>
+        <div class="small" style="margin-top:7px">Deploy either side independently. Fenders cushion side contact while still allowing the boat to slide and pivot along a dock.</div>
+      </div>
+
+      <div class="card"><div class="tripleRow"><button id="reset">Reset</button><button id="approach">New Approach</button><button id="openSetup">Setup</button></div></div>
+    </div>
+
+    <div class="controlCol" id="controlColRight">
+      <div class="card">
+        <div class="label">Steering</div>
+        <input id="steer" type="range" min="-35" max="35" value="0">
+        <div class="small">Port ← <span id="steerVal">0°</span> → Starboard</div>
+        <div class="row" style="margin-top:8px">
+          <button id="portLock">Full Port</button><button id="stbdLock">Full Starboard</button>
+        </div>
+        <button id="center" style="width:100%;margin-top:6px">Center Drives</button>
+      </div>
+
+      <div class="card" id="bowThrusterCard">
+        <div class="label">Bow Thruster</div>
+        <div class="thrusterButtons">
+          <button class="thrusterBtn" data-thruster="-1" type="button">← PORT</button>
+          <button class="thrusterBtn" data-thruster="1" type="button">STARBOARD →</button>
+        </div>
+        <div class="small" style="margin-top:7px">Momentary control. Hold to push the bow sideways; release to stop.</div>
+      </div>
+
+      <div class="card">
+        <div class="label">Docking Lines</div>
+        <div class="lineButtons">
+          <button class="lineToggle" data-line="bow">Bow</button>
+          <button class="lineToggle" data-line="fwdSpring">Forward Spring</button>
+          <button class="lineToggle" data-line="aftSpring">Aft Spring</button>
+          <button class="lineToggle" data-line="stern">Stern</button>
+        </div>
+        <div class="small" style="margin-top:7px">
+          Tap near the dock to attach/release. Springs automatically lead in the appropriate direction.
         </div>
       </div>
-      <div class="stack" id="bothStack">
-        <div class="small" style="text-align:center" id="bothLabel"><b>BOTH</b></div>
-        <div class="enginePad" data-engine="both">
-          <button class="engineBtn ahead" data-power="25">25 FWD</button>
-          <button class="engineBtn ahead" data-power="10">10 FWD</button>
-          <button class="engineBtn reverse" data-power="-10">10 REV</button>
-          <button class="engineBtn reverse" data-power="-25">25 REV</button>
-        </div>
-      </div>
-      <div class="stack" id="stbdStack">
-        <div class="small" style="text-align:center" id="stbdLabel"><b>STARBOARD</b></div>
-        <div class="enginePad" data-engine="stbd">
-          <button class="engineBtn ahead" data-power="25">25 FWD</button>
-          <button class="engineBtn ahead" data-power="10">10 FWD</button>
-          <button class="engineBtn reverse" data-power="-10">10 REV</button>
-          <button class="engineBtn reverse" data-power="-25">25 REV</button>
-        </div>
-      </div>
-    </div>
-    <div class="small" id="throttleHelp" style="margin-top:8px">Hold for power. Release = neutral. 10% approximates idle-ahead/idle-reverse; 25% is a stronger docking blip. The centre column controls both engines.</div>
-  </div>
-
-  <div class="card">
-    <div class="label">Steering</div>
-    <input id="steer" type="range" min="-35" max="35" value="0">
-    <div class="small">Port ← <span id="steerVal">0°</span> → Starboard</div>
-    <div class="row" style="margin-top:8px">
-      <button id="portLock">Full Port</button><button id="stbdLock">Full Starboard</button>
-    </div>
-    <button id="center" style="width:100%;margin-top:6px">Center Drives</button>
-  </div>
-
-  <div class="card" id="bowThrusterCard">
-    <div class="label">Bow Thruster</div>
-    <div class="thrusterButtons">
-      <button class="thrusterBtn" data-thruster="-1" type="button">← PORT</button>
-      <button class="thrusterBtn" data-thruster="1" type="button">STARBOARD →</button>
-    </div>
-    <div class="small" style="margin-top:7px">Momentary control. Hold to push the bow sideways; release to stop.</div>
-  </div>
-
-  <div class="card">
-    <div class="label">Docking Lines</div>
-    <div class="lineButtons">
-      <button class="lineToggle" data-line="bow">Bow</button>
-      <button class="lineToggle" data-line="fwdSpring">Forward Spring</button>
-      <button class="lineToggle" data-line="aftSpring">Aft Spring</button>
-      <button class="lineToggle" data-line="stern">Stern</button>
-    </div>
-    <div class="small" style="margin-top:7px">
-      Tap near the dock to attach/release. Springs automatically lead in the appropriate direction.
     </div>
   </div>
-
-
-  <div class="card">
-    <div class="label">Fenders</div>
-    <div class="row">
-      <button class="fenderToggle" id="portFenders">PORT FENDERS</button>
-      <button class="fenderToggle" id="stbdFenders">STBD FENDERS</button>
-    </div>
-    <div class="small" style="margin-top:7px">Deploy either side independently. Fenders cushion side contact while still allowing the boat to slide and pivot along a dock.</div>
-  </div>
-
-
-  <div class="card"><div class="tripleRow"><button id="reset">Reset</button><button id="approach">New Approach</button><button id="openSetup">Setup</button></div></div>
 </div>
 </div>
 
