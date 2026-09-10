@@ -99,6 +99,7 @@ header{
 #windArrow{left:18px;top:18px}
 #currentArrow{left:18px;top:60px}
 #controls{
+  position:relative;
   padding:10px;
   display:grid;
   gap:10px;
@@ -585,7 +586,7 @@ body.home-mode #homeScreen, body.levels-mode #levelScreen{overflow:auto}
 #levelComplete{
   position:absolute;
   inset:0;
-  z-index:20;
+  z-index:50;
   display:none;
   place-items:center;
   padding:16px;
@@ -689,6 +690,21 @@ body.sim-mode{
   overscroll-behavior-x:none;
 }
 
+
+#bowThrusterCard{display:none}
+.thrusterButtons{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.thrusterBtn{
+  min-height:48px;
+  touch-action:none;
+  user-select:none;
+  -webkit-user-select:none;
+  background:linear-gradient(180deg,#31546b,#213d50);
+}
+.thrusterBtn.held{
+  transform:translateY(1px);
+  box-shadow:inset 0 0 0 2px rgba(109,181,255,.38);
+}
+
 </style>
 </head>
 <body class="photo-marina">
@@ -739,7 +755,6 @@ body.sim-mode{
         <label>Boat<select id="boatSelect"></select></label>
         <label>Marina<select id="marinaSelect"></select></label>
         <label>Starting Position<select id="spawnSelect"></select></label>
-        <label>Scenario<select id="scenarioSelect"></select></label>
         <label>Other Boats
           <select id="otherBoatsSelect">
             <option value="none">None</option>
@@ -761,7 +776,7 @@ body.sim-mode{
           <button id="resumeSim" type="button">Resume Current Simulation</button>
         </div>
       </div>
-      <div class="small" style="margin-top:8px">Wind, current, and other-boat density are configured here before you start the simulator. You can come back to Setup any time to change conditions.</div>
+      <div class="small" style="margin-top:8px">Wind and current are controlled directly with the sliders and direction dials below. You can come back to Setup any time to change conditions.</div>
       <button id="homeFromSetup" type="button">← Home</button>
     </div>
 
@@ -857,6 +872,9 @@ body.sim-mode{
     <div id="levelHudObjective"></div>
   </div>
   <div id="impactFeedback" aria-live="polite"></div>
+</div>
+
+<div id="controls">
   <div id="levelComplete">
     <div class="levelCompleteCard">
       <div class="levelCompleteTitle">Level Complete</div>
@@ -873,9 +891,6 @@ body.sim-mode{
       </div>
     </div>
   </div>
-</div>
-
-<div id="controls">
   <div class="card">
     <div class="label">Momentary Throttle / Shift</div>
     <div class="throttles">
@@ -920,6 +935,14 @@ body.sim-mode{
     <button id="center" style="width:100%;margin-top:6px">Center Drives</button>
   </div>
 
+  <div class="card" id="bowThrusterCard">
+    <div class="label">Bow Thruster</div>
+    <div class="thrusterButtons">
+      <button class="thrusterBtn" data-thruster="-1" type="button">← PORT</button>
+      <button class="thrusterBtn" data-thruster="1" type="button">STARBOARD →</button>
+    </div>
+    <div class="small" style="margin-top:7px">Momentary control. Hold to push the bow sideways; release to stop.</div>
+  </div>
 
   <div class="card">
     <div class="label">Docking Lines</div>
@@ -993,6 +1016,49 @@ body.sim-mode{
       collisionShapeUnits: [
         [55,0],[39,11],[14,16],[-28,16],[-50,12],[-52,0],
         [-50,-12],[-28,-16],[14,-16],[39,-11]
+      ]
+    },
+    motorYacht42: {
+      name: "42 ft Twin Inboard Motor Yacht + Bow Thruster",
+      dimensions: { lengthFt: 42, beamFt: 13.5 },
+      render: { lengthUnits: 146, beamUnits: 47, spriteUrl: null },
+      propulsion: {
+        type: "twinInboardRudder",
+        maxSteerDeg: 35,
+        thrust: 0.058,
+        reverseEfficiency: 0.88,
+        driveX: -0.39,
+        engineY: 0.17,
+        rudderX: -0.47,
+        rudderWashGain: 0.58,
+        reverseRudderGain: 0.07,
+        flowRudderGain: 0.54,
+        reverseFlowRudderGain: 0.42,
+        propWalkYawGainAhead: 6.8,
+        propWalkYawGainReverse: 13.0,
+        bowThruster: {
+          force: 0.050,
+          xBody: 0.42
+        }
+      },
+      hydrodynamics: {
+        waterCenterX: -0.18,
+        airCenterX: 0.10,
+        forwardLinearDrag: 0.064,
+        forwardQuadraticDrag: 0.34,
+        lateralLinearDrag: 0.64,
+        lateralQuadraticDrag: 1.10,
+        yawDampingBase: 0.22,
+        yawDampingSpeedGain: 11,
+        yawDampingSpeedMax: 0.27
+      },
+      maneuvering: {
+        fullPowerTurnRadiusFt: 30,
+        turnCalibrationResponse: 1.45
+      },
+      collisionShapeUnits: [
+        [73,0],[55,15],[22,22],[-38,22],[-67,17],[-71,0],
+        [-67,-17],[-38,-22],[22,-22],[55,-15]
       ]
     },
     inboard30: {
@@ -1111,7 +1177,8 @@ body.sim-mode{
       spawnPoints: [
         {id:"openWater", name:"Open Water — South Basin", x:.50,y:.86,heading:270},
         {id:"leftSlipBowIn", name:"Bow-In Slip — West Dock", x:.15,y:.395,heading:180},
-        {id:"gasDockAlongside", name:"Alongside — Gas Dock", x:.855,y:.60,heading:270}
+        {id:"gasDockAlongside", name:"Alongside — Gas Dock", x:.855,y:.60,heading:270},
+        {id:"level2GasDock", name:"Level 2 Gas Dock Start", x:.875,y:.625,heading:270}
       ]
     },
     doubleTMarina: {
@@ -1155,6 +1222,7 @@ body.sim-mode{
         {id:"innerSlipBowIn", name:"Inner Pontoon — Bow In", x:.425,y:.425,heading:180},
         {id:"innerSlipBowOut", name:"Inner Pontoon — Bow Out", x:.545,y:.425,heading:180},
         {id:"level7Departure", name:"Level 7 Departure Start", x:.300,y:.605,heading:0},
+        {id:"level5YachtSlip", name:"Level 5 Yacht Inner Slip", x:.707,y:.425,heading:180},
         {id:"mainWharfAlongside", name:"Alongside — Main Wharf", x:.50,y:.245,heading:180}
       ]
     }
@@ -1287,15 +1355,18 @@ body.sim-mode{
       number: 2,
       name: "Crowded Gas Dock Departure",
       type: "departure",
-      description: "Start tied alongside a busy gas dock. Cast off, maneuver clear of the moored boats, and reach open water.",
+      description: "Start tight alongside the gas dock with another boat immediately ahead. Use lines or careful prop walking to work the twin-inboard cruiser off the dock and reach open water.",
       marina: "referenceMarina",
       boat: "inboard30",
-      spawnId: "gasDockAlongside",
-      otherBoats: "high",
+      spawnId: "level2GasDock",
+      otherBoats: "medium",
+      levelObstacles: [
+        {id:"level2BoatAhead",x:.875,y:.425,heading:270,boatKey:"bowrider21"}
+      ],
       wind: {speedKt:0,directionDeg:90},
       current: {speedKt:0,directionDeg:180},
       startLines: ["bow","stern"],
-      startFenders: "port",
+      startFenders: "stbd",
       target: {x:.350,y:.805,w:.330,h:.145,label:"OPEN WATER",style:"exit"}
     },
     doubleTCrosswind: {
@@ -1328,16 +1399,16 @@ body.sim-mode{
     },
     doubleTTightDeparture: {
       number: 5,
-      name: "Double-T Tight Departure",
+      name: "Big Yacht Tight Departure",
       type: "departure",
-      description: "Start secured bow-out on an inner pontoon. Cast off into heavy marina traffic, then work through wind and current to reach the south basin.",
+      description: "Depart a 42 ft twin-inboard motor yacht from a tight inner slip. Use the bow thruster, engines, rudders and lines to clear heavy traffic in wind and current.",
       marina: "doubleTMarina",
-      boat: "inboard30",
-      spawnId: "innerSlipBowOut",
+      boat: "motorYacht42",
+      spawnId: "level5YachtSlip",
       otherBoats: "high",
-      wind: {speedKt:12,directionDeg:270},
-      current: {speedKt:.5,directionDeg:90},
-      startLines: ["bow","stern"],
+      wind: {speedKt:14,directionDeg:270},
+      current: {speedKt:.6,directionDeg:90},
+      startLines: ["bow","aftSpring","stern"],
       startFenders: "stbd",
       target: {x:.385,y:.815,w:.230,h:.145,label:"SOUTH BASIN",style:"exit"}
     },
@@ -1365,6 +1436,7 @@ body.sim-mode{
       spawnId: "level7Departure",
       otherBoats: "medium",
       movingTraffic: "busy",
+      movingTrafficDelayMs: 9000,
       wind: {speedKt:16,directionDeg:270},
       current: {speedKt:.8,directionDeg:90},
       startLines: ["bow","aftSpring","stern"],
@@ -1390,6 +1462,7 @@ body.sim-mode{
   let activeScenarioKey = "calmPractice";
   let activeOtherBoatsDensity = "none";
   let activeMovingTrafficDensity = "off";
+  let activeMovingTrafficDelayMs = 0;
   let activeObstacleBoats = [];
   let activeMovingBoats = [];
   let activeSpawnId = "openWater";
@@ -1537,15 +1610,12 @@ body.sim-mode{
   function populateSetupControls(){
     const boatSelect=document.getElementById('boatSelect');
     const marinaSelect=document.getElementById('marinaSelect');
-    const scenarioSelect=document.getElementById('scenarioSelect');
     const otherBoatsSelect=document.getElementById('otherBoatsSelect');
     const movingTrafficSelect=document.getElementById('movingTrafficSelect');
     boatSelect.innerHTML=Object.entries(BOATS).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join('');
     marinaSelect.innerHTML=Object.entries(MARINAS).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join('');
-    scenarioSelect.innerHTML=Object.entries(SCENARIOS).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join('');
     boatSelect.value=activeBoatKey;
     marinaSelect.value=activeMarinaKey;
-    scenarioSelect.value=activeScenarioKey;
     if(otherBoatsSelect) otherBoatsSelect.value=activeOtherBoatsDensity;
     if(movingTrafficSelect) movingTrafficSelect.value=activeMovingTrafficDensity;
     populateSpawnOptions(activeMarinaKey,activeSpawnId);
@@ -1582,6 +1652,7 @@ body.sim-mode{
   const levelHudObjective=document.getElementById('levelHudObjective');
   const levelComplete=document.getElementById('levelComplete');
   const steer=document.getElementById('steer');
+  const bowThrusterCard=document.getElementById('bowThrusterCard');
 
   const lineEls={
     bow:document.getElementById('lineBow'),
@@ -1639,6 +1710,7 @@ body.sim-mode{
   stbdFenderBtn.addEventListener('click',()=>{ fenderState.stbd=!fenderState.stbd; updateFenderUI(); });
 
   let state={x:.50,y:.86,a:180,vx:0,vy:0,omega:0,port:0,stbd:0,steer:0};
+  let bowThrusterInput=0;
   let last=performance.now();
 
   // Visual camera only. It never changes state.x/y, collision geometry, thrust,
@@ -1870,6 +1942,29 @@ body.sim-mode{
     driveS.style.transform='rotate('+(-v)+'deg)';
   }
 
+
+  // Momentary bow-thruster control for boats equipped with one.
+  document.querySelectorAll('.thrusterBtn').forEach(btn=>{
+    const dir=+btn.dataset.thruster;
+    const engage=e=>{
+      e.preventDefault();
+      bowThrusterInput=dir;
+      btn.classList.add('held');
+      if(btn.setPointerCapture && e.pointerId!==undefined){
+        try{btn.setPointerCapture(e.pointerId);}catch(_){}
+      }
+    };
+    const release=e=>{
+      if(e) e.preventDefault();
+      if(bowThrusterInput===dir) bowThrusterInput=0;
+      btn.classList.remove('held');
+    };
+    btn.addEventListener('pointerdown',engage,{passive:false});
+    btn.addEventListener('pointerup',release,{passive:false});
+    btn.addEventListener('pointercancel',release,{passive:false});
+    btn.addEventListener('lostpointercapture',release);
+  });
+
   // Native range inputs can lose their drag on mobile when another pointer is
   // already captured by a throttle button. Handle steering explicitly with its
   // own pointer capture so throttle + rudder work simultaneously.
@@ -2071,6 +2166,12 @@ body.sim-mode{
     throttleHelp.textContent = single
       ? 'Hold for power. Release = neutral. These controls operate the single sterndrive engine. 10% approximates idle-ahead/idle-reverse; 25% is a stronger docking blip.'
       : 'Hold for power. Release = neutral. 10% approximates idle-ahead/idle-reverse; 25% is a stronger docking blip. The centre column controls both engines.';
+
+    if(bowThrusterCard){
+      bowThrusterCard.style.display=activeBoat().propulsion.bowThruster?'block':'none';
+    }
+    bowThrusterInput=0;
+    document.querySelectorAll('.thrusterBtn').forEach(b=>b.classList.remove('held'));
   }
 
 
@@ -2142,6 +2243,7 @@ body.sim-mode{
     levelRun.active=false;
     state.port=0;
     state.stbd=0;
+    bowThrusterInput=0;
     document.querySelectorAll('.engineBtn').forEach(b=>b.classList.remove('held'));
 
     const adjustedMs=levelRun.elapsedMs+levelRun.penaltySec*1000;
@@ -2197,8 +2299,13 @@ body.sim-mode{
       parts.push(`<circle class="thumbPiling" cx="${x*1000}" cy="${y*600}" r="6"/>`);
     }
 
-    // Show the same configured obstacle density used by the level.
-    for(const slot of plannedObstacleSlots(level.marina,level.spawnId,level.otherBoats||'none')){
+    // Show the same configured obstacle density used by the level, plus
+    // any level-specific challenge boats.
+    const thumbObstacles=[
+      ...plannedObstacleSlots(level.marina,level.spawnId,level.otherBoats||'none'),
+      ...(level.levelObstacles||[])
+    ];
+    for(const slot of thumbObstacles){
       const profile=BOATS[slot.boatKey]||BOATS.inboard30;
       const pts=profile.collisionShapeUnits.map(([px,py])=>`${px},${py}`).join(' ');
       parts.push(
@@ -2258,6 +2365,7 @@ body.sim-mode{
     activeSpawnId=level.spawnId;
     activeOtherBoatsDensity=level.otherBoats||'none';
     activeMovingTrafficDensity=level.movingTraffic||'off';
+    activeMovingTrafficDelayMs=level.movingTrafficDelayMs||0;
     renderMarina();
 
     const b=activeBoat();
@@ -2339,6 +2447,7 @@ body.sim-mode{
     activeMarinaKey=sc.marina;
     activeOtherBoatsDensity=sc.otherBoats || activeOtherBoatsDensity || 'none';
     activeMovingTrafficDensity=sc.movingTraffic || activeMovingTrafficDensity || 'off';
+    activeMovingTrafficDelayMs=0;
     renderMarina();
     const b=activeBoat();
     steer.min=-b.propulsion.maxSteerDeg;
@@ -2422,15 +2531,25 @@ body.sim-mode{
     activeSpawnId=document.getElementById('spawnSelect').value || MARINAS[activeMarinaKey].spawnPoints[0].id;
     activeOtherBoatsDensity=document.getElementById('otherBoatsSelect').value || 'none';
     activeMovingTrafficDensity=document.getElementById('movingTrafficSelect').value || 'off';
-    const selectedScenario=document.getElementById('scenarioSelect').value;
-    const sc=SCENARIOS[selectedScenario];
-    activeScenarioKey=selectedScenario;
-    if(sc){
-      sc.boat=activeBoatKey;
-      sc.marina=activeMarinaKey;
-      sc.otherBoats=activeOtherBoatsDensity;
-      sc.movingTraffic=activeMovingTrafficDensity;
-    }
+
+    // Practice mode has no preset Scenario selector. The manual environment
+    // controls are the source of truth and are saved into the practice state
+    // before the simulator is reset/applied.
+    const sc=SCENARIOS[activeScenarioKey] || SCENARIOS.calmPractice;
+    sc.boat=activeBoatKey;
+    sc.marina=activeMarinaKey;
+    sc.spawnId=activeSpawnId;
+    sc.otherBoats=activeOtherBoatsDensity;
+    sc.movingTraffic=activeMovingTrafficDensity;
+    sc.wind={
+      speedKt:+windInput.value,
+      directionDeg:windDirDeg
+    };
+    sc.current={
+      speedKt:+curInput.value,
+      directionDeg:curDirDeg
+    };
+
     applyScenario(activeScenarioKey);
     showSimulator();
   };
@@ -2549,7 +2668,8 @@ body.sim-mode{
         route,
         direction:1,
         progress:0,
-        finished:false
+        finished:false,
+        startsAt:performance.now()+activeMovingTrafficDelayMs
       };
       placeMovingBoatAtProgress(ob,0);
       return ob;
@@ -2571,6 +2691,7 @@ body.sim-mode{
     const marina=activeMarina();
     for(const ob of activeMovingBoats){
       if(ob.finished) continue;
+      if(performance.now() < (ob.startsAt||0)) continue;
       const metrics=routeSegmentLengths(ob.route,marina);
       if(!metrics.total) continue;
       const speedFps=(ob.speedKt||2.5)/0.592484;
@@ -2603,6 +2724,14 @@ body.sim-mode{
 
   function rebuildObstacleBoats(){
     activeObstacleBoats=plannedObstacleSlots(activeMarinaKey,activeSpawnId,activeOtherBoatsDensity);
+
+    // Levels can add specific boats that are part of the challenge layout
+    // without changing Practice-mode occupancy.
+    if(activeGameMode==='play' && activeLevelKey){
+      const extras=LEVELS[activeLevelKey]?.levelObstacles||[];
+      activeObstacleBoats.push(...extras.map(ob=>({...ob})));
+    }
+
     if(!obstacleBoatsLayer) return;
     obstacleBoatsLayer.innerHTML=activeObstacleBoats.map(ob=>
       `<div class="obstacleBoat" data-obstacle-id="${ob.id}"></div>`
@@ -3114,6 +3243,14 @@ body.sim-mode{
     } else {
       engineForce(state.port,-1);
       engineForce(state.stbd,1);
+    }
+
+    // Bow thruster: pure transverse thrust applied near the bow. Positive input
+    // pushes the bow to starboard; negative input pushes it to port.
+    if(propulsion.bowThruster && bowThrusterInput){
+      const bt=propulsion.bowThruster;
+      const lateral=bt.force*bowThrusterInput;
+      addForce(rightx*lateral,righty*lateral,bt.xBody??0.42,0);
     }
 
     // Resolve boat velocity into fore/aft and lateral components.
