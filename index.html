@@ -828,7 +828,7 @@ body.sim-mode{
         <div class="card instructionCard">
           <div class="label">Docking Lines</div>
           <div class="instructionDemo lineButtons"><button>Bow</button><button>For Spring</button><button>Aft Spring</button><button>Stern</button></div>
-          <div class="small" style="margin-top:8px">Tap a line button near a dock to attach or release it. Bow and stern lines restrain their respective ends; spring lines resist fore-and-aft movement and are useful for pivoting off a dock.</div>
+          <div class="small" style="margin-top:8px">Tap a line button near a dock to attach or release it. Bow and stern lines restrain their respective ends; spring lines resist fore-and-aft movement and are useful for pivoting off a dock. With the anchor down, Stern deploys a pair of aft-quarter lines for Mediterranean mooring.</div>
         </div>
       </div>
     </div>
@@ -966,6 +966,7 @@ body.sim-mode{
     <div id="lineFwdSpring" class="mooringLine"></div>
     <div id="lineAftSpring" class="mooringLine"></div>
     <div id="lineStern" class="mooringLine"></div>
+    <div id="lineSternMed2" class="mooringLine"></div>
     <div id="anchorRode" class="anchorRode"></div>
     <div id="anchorPoint" class="anchorPoint"></div>
   </div>
@@ -1891,6 +1892,7 @@ body.sim-mode{
     aftSpring:document.getElementById('lineAftSpring'),
     stern:document.getElementById('lineStern')
   };
+  const sternMedLineEl2=document.getElementById('lineSternMed2');
   const anchorRodeEl=document.getElementById('anchorRode');
   const anchorPointEl=document.getElementById('anchorPoint');
   const anchorDownBtn=document.getElementById('anchorDown');
@@ -3383,6 +3385,83 @@ body.sim-mode{
     return best;
   }
 
+  function chooseMedSternPair(r){
+    const def=lineDefs.stern;
+    const a=state.a*Math.PI/180;
+    const fpx={x:Math.cos(a),y:Math.sin(a)};
+    const rpx={x:-Math.sin(a),y:Math.cos(a)};
+    const points=sampleDockPoints(r);
+
+    function candidatesForSide(side){
+      const cleat=boatLocalPointN(def.xPx,side*14,r);
+      const cx=cleat.x*r.width, cy=cleat.y*r.height;
+      const list=[];
+      for(const p of points){
+        const px=p.x*r.width, py=p.y*r.height;
+        const dx=px-cx, dy=py-cy;
+        const dist=Math.hypot(dx,dy);
+        if(dist>180) continue;
+
+        // For a Med stern line, prefer a point aft of the stern cleat and
+        // outboard on the same side. This naturally creates a V-shaped pair.
+        const along=dx*fpx.x+dy*fpx.y;
+        const lateral=dx*rpx.x+dy*rpx.y;
+        const sideMatch=side*lateral;
+        let score=dist;
+        if(along>20) score+=120+(along-20)*2.5;
+        if(sideMatch<7) score+=105+(7-sideMatch)*4.0;
+        score-=Math.min(16,Math.max(0,sideMatch)*0.20);
+        list.push({score,side,target:{x:p.x,y:p.y},distPx:dist,lateral});
+      }
+      list.sort((a,b)=>a.score-b.score);
+      return list.slice(0,24);
+    }
+
+    const port=candidatesForSide(-1);
+    const stbd=candidatesForSide(1);
+    let best=null;
+    for(const p of port){
+      for(const s of stbd){
+        const dx=(s.target.x-p.target.x)*r.width;
+        const dy=(s.target.y-p.target.y)*r.height;
+        const sep=Math.hypot(dx,dy);
+        // Separate quay points give the stern meaningful lateral restraint,
+        // but reject implausibly distant pairs on unrelated structures.
+        if(sep<24 || sep>150) continue;
+        if(p.lateral>=s.lateral) continue;
+        const score=p.score+s.score+Math.abs(sep-58)*0.05;
+        if(!best || score<best.score) best={score,lines:[p,s]};
+      }
+    }
+    return best;
+  }
+
+  function attachMedSternPair(){
+    const r=worldBaseRect();
+    const choice=chooseMedSternPair(r);
+    if(!choice){
+      lineNotice='Move the stern closer to the quay to attach both stern lines';
+      lineNoticeUntil=performance.now()+1800;
+      return false;
+    }
+
+    const def=lineDefs.stern;
+    const pair=choice.lines.map(item=>{
+      const cleat=boatLocalPointN(def.xPx,item.side*14,r);
+      const dxN=item.target.x-cleat.x, dyN=item.target.y-cleat.y;
+      return {
+        side:item.side,
+        target:item.target,
+        lengthN:Math.hypot(dxN,dyN)+DOCKING_TUNING.line.attachSlack,
+        tension:0
+      };
+    });
+
+    lineState.stern={active:true,medPair:true,pair,tension:0};
+    updateLineButton('stern');
+    return true;
+  }
+
   function updateLineButton(type){
     const btn=document.querySelector('.lineToggle[data-line="'+type+'"]');
     if(btn) btn.classList.toggle('active',!!lineState[type].active);
@@ -3392,6 +3471,10 @@ body.sim-mode{
     lineState[type]={active:false};
     lineEls[type].style.display='none';
     lineEls[type].classList.remove('taut');
+    if(type==='stern'){
+      sternMedLineEl2.style.display='none';
+      sternMedLineEl2.classList.remove('taut');
+    }
     updateLineButton(type);
   }
 
@@ -3423,8 +3506,13 @@ body.sim-mode{
   document.querySelectorAll('.lineToggle').forEach(btn=>{
     btn.addEventListener('click',()=>{
       const type=btn.dataset.line;
-      if(lineState[type].active) releaseLine(type);
-      else attachLine(type);
+      if(lineState[type].active){
+        releaseLine(type);
+      }else if(type==='stern' && anchorState.mode!=='stowed'){
+        attachMedSternPair();
+      }else{
+        attachLine(type);
+      }
     });
   });
 
@@ -3700,33 +3788,25 @@ body.sim-mode{
     // short, stiff transition to firm restraint. Tension is one-way only.
     // Damping uses velocity of the ACTUAL cleat (including hull rotation), so
     // a loaded bow/stern/spring line arrests motion without rubber-band bounce.
-    for(const type of Object.keys(lineState)){
-      const ls=lineState[type];
-      if(!ls.active) continue;
-
-      const def=lineDefs[type];
+    function applyDockLinePhysics(ls,def){
       const sideOffsetPx=ls.side*14;
       const cleat=boatLocalPointN(def.xPx,sideOffsetPx,r);
       const dx=ls.target.x-cleat.x;
       const dy=ls.target.y-cleat.y;
       const dist=Math.hypot(dx,dy);
-      if(dist<1e-7){ ls.tension=0; continue; }
+      if(dist<1e-7){ ls.tension=0; return 0; }
 
       const stretch=dist-ls.lengthN;
       if(stretch<=0){
-        // Rope cannot push. Returning toward the cleat makes it instantly slack.
         ls.tension=0;
-        continue;
+        return 0;
       }
 
       const ux=dx/dist, uy=dy/dist;
-
-      // Velocity of the actual cleat in normalized world coordinates.
       const rx=cleat.x-state.x, ry=cleat.y-state.y;
       const omegaRad=state.omega*Math.PI/180;
       const cleatVx=state.vx-omegaRad*ry;
       const cleatVy=state.vy+omegaRad*rx;
-      // Positive = cleat moving away from target, stretching the rope further.
       const outwardSpeed=-(cleatVx*ux+cleatVy*uy);
 
       const cfg=DOCKING_TUNING.line;
@@ -3739,6 +3819,23 @@ body.sim-mode{
       if(tension>0){
         const actualSideY=ls.side*(activeBoat().dimensions.beamFt/activeBoat().dimensions.lengthFt)*0.46;
         addForce(ux*tension,uy*tension,def.xBody,actualSideY);
+      }
+      return tension;
+    }
+
+    for(const type of Object.keys(lineState)){
+      const ls=lineState[type];
+      if(!ls.active) continue;
+      const def=lineDefs[type];
+
+      if(type==='stern' && ls.medPair && Array.isArray(ls.pair)){
+        let maxPairTension=0;
+        for(const sternLine of ls.pair){
+          maxPairTension=Math.max(maxPairTension,applyDockLinePhysics(sternLine,def));
+        }
+        ls.tension=maxPairTension;
+      }else{
+        applyDockLinePhysics(ls,def);
       }
     }
 
@@ -4069,13 +4166,10 @@ body.sim-mode{
 
     // Draw docking lines in world coordinates.
     const rr=worldBaseRect();
-    for(const type of Object.keys(lineState)){
-      const ls=lineState[type], el=lineEls[type];
-      if(!ls.active){
-        el.style.display='none';
-        continue;
-      }
-      const def=lineDefs[type];
+    sternMedLineEl2.style.display='none';
+    sternMedLineEl2.classList.remove('taut');
+
+    function drawDockingLine(ls,def,el){
       const cleat=boatLocalPointN(def.xPx,ls.side*14,rr);
       const x1=cleat.x*rr.width, y1=worldRenderY(cleat.y);
       const x2=ls.target.x*rr.width, y2=worldRenderY(ls.target.y);
@@ -4086,6 +4180,21 @@ body.sim-mode{
       el.style.width=Math.hypot(dx,dy)+'px';
       el.style.transform='rotate('+Math.atan2(dy,dx)*180/Math.PI+'deg)';
       el.classList.toggle('taut',(ls.tension||0)>.002);
+    }
+
+    for(const type of Object.keys(lineState)){
+      const ls=lineState[type], el=lineEls[type];
+      if(!ls.active){
+        el.style.display='none';
+        continue;
+      }
+      const def=lineDefs[type];
+      if(type==='stern' && ls.medPair && Array.isArray(ls.pair)){
+        if(ls.pair[0]) drawDockingLine(ls.pair[0],def,lineEls.stern);
+        if(ls.pair[1]) drawDockingLine(ls.pair[1],def,sternMedLineEl2);
+      }else{
+        drawDockingLine(ls,def,el);
+      }
     }
 
 
