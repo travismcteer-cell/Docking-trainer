@@ -1441,18 +1441,19 @@ body.sim-mode{
       // is tucked toward the wall and its bow points into the basin.
       // LOW: sparse but already shows the full size range.
       {id:'medWestYacht',      x:.151,y:.405,heading:0,  boatKey:'motorYacht42',level:1},
-      {id:'medEastCruiser',    x:.879,y:.565,heading:180,boatKey:'cruiser31',   level:1},
+      {id:'medEastCruiser',    x:.879,y:.690,heading:180,boatKey:'cruiser31',   level:1},
       {id:'medSouthBowrider',  x:.790,y:1.245,heading:270,boatKey:'bowrider21', level:1},
 
       // MEDIUM: adds three more stern-to berths while keeping broad gaps open.
       {id:'medWestInboard',    x:.108,y:.705,heading:0,  boatKey:'inboard30',   level:2},
-      {id:'medEastYacht',      x:.839,y:.875,heading:180,boatKey:'motorYacht42',level:2},
+      // Keep the large yacht in the upper half so the entrance / lower basin stays navigable.
+      {id:'medEastYacht',      x:.839,y:.410,heading:180,boatKey:'motorYacht42',level:2},
       {id:'medSouthCruiser',   x:.905,y:1.210,heading:270,boatKey:'cruiser31',   level:2},
 
       // HIGH: busy marina, but with deliberate open Med-mooring spaces remaining.
       {id:'medWestBowrider',   x:.090,y:.920,heading:0,  boatKey:'bowrider21',  level:3},
       {id:'medWestCruiserTop', x:.108,y:.245,heading:0,  boatKey:'cruiser31',   level:3},
-      {id:'medEastBowrider',   x:.898,y:.325,heading:180,boatKey:'bowrider21',  level:3},
+      {id:'medEastBowrider',   x:.898,y:.245,heading:180,boatKey:'bowrider21',  level:3},
       {id:'medSouthInboard',   x:.675,y:1.210,heading:270,boatKey:'inboard30',   level:3}
     ]  };
 
