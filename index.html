@@ -114,10 +114,10 @@ header{
   box-shadow:0 6px 18px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.04)
 }
 .label{font-size:12px;font-weight:800;margin-bottom:6px}
-.small{font-size:11px;color:var(--muted)}
+.small{font-size:11px;color:var(--muted);min-width:0;overflow-wrap:anywhere}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .throttles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
-.stack{display:grid;gap:6px}
+.stack{display:grid;gap:6px;min-width:0}
 button{
   border:1px solid rgba(188,214,222,.32);
   background:linear-gradient(180deg,#213f49,#17313a);
@@ -130,7 +130,7 @@ button{
 button.active{background:#345f6c}
 input[type=range]{width:100%;accent-color:#6db5ff}
 .enginePad{display:grid;grid-template-columns:1fr;gap:6px}
-.engineBtn{padding:13px 6px;touch-action:none;user-select:none;-webkit-user-select:none}
+.engineBtn{padding:13px 6px;touch-action:none;user-select:none;-webkit-user-select:none;min-width:0;white-space:normal;overflow-wrap:anywhere}
 .engineBtn.ahead{background:linear-gradient(180deg,#285d4a,#1d4939);border-color:#3d765f}
 .engineBtn.reverse{background:linear-gradient(180deg,#633a3a,#4b2a2a);border-color:#8a5555}
 .engineBtn.held{transform:translateY(1px);box-shadow:inset 0 0 0 2px rgba(23,51,58,.22)}
@@ -203,11 +203,11 @@ input[type=range]{width:100%;accent-color:#6db5ff}
   .controlCol{gap:7px}
   .card{padding:8px;border-radius:10px}
   .enginePad{gap:5px}
-  .engineBtn{padding:10px 3px;font-size:13px}
+  .engineBtn{padding:10px 3px;font-size:13px;min-width:0;white-space:normal}
   .lineButtons{gap:5px}
-  .lineToggle{padding:9px 4px;font-size:12px}
+  .lineToggle{padding:9px 4px;font-size:12px;min-width:0;white-space:normal}
   .row{gap:6px}
-  .row button{padding:9px 4px;font-size:12px}
+  .row button{padding:9px 4px;font-size:12px;min-width:0;white-space:normal}
   .thrusterBtn{padding:10px 5px;font-size:12px}
   .fenderToggle{padding:10px 5px;font-size:12px}
 }
@@ -480,7 +480,7 @@ body.photo-marina #dockMap .gasText{
 /* --------------------------------------------------------------------------
    GAME FLOW: Home -> Practice Setup OR Play -> Level Select -> Simulator
    -------------------------------------------------------------------------- */
-#homeScreen,#levelScreen{
+#homeScreen,#levelScreen,#instructionsScreen{
   display:none;
   padding:18px;
   background:linear-gradient(180deg,#102c36,#0a2028);
@@ -493,7 +493,7 @@ body.photo-marina #dockMap .gasText{
 }
 .gameTitle{font-size:28px;font-weight:950;letter-spacing:-.02em}
 .gameLead{max-width:560px;margin:8px auto 0;color:var(--muted);font-size:13px;line-height:1.5}
-.modeGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modeGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .modeButton{
   min-height:145px;
   padding:18px;
@@ -507,6 +507,7 @@ body.photo-marina #dockMap .gasText{
 .modeButton span{font-size:12px;color:#c4d5da;line-height:1.45}
 #practiceModeBtn{background:linear-gradient(180deg,#285d4a,#1d4939)}
 #playModeBtn{background:linear-gradient(180deg,#295574,#183e58)}
+#instructionsModeBtn{background:linear-gradient(180deg,#66512b,#493918)}
 .levelTopRow{display:flex;justify-content:space-between;gap:10px;align-items:center}
 .levelCards{display:grid;gap:10px}
 .levelCard{
@@ -524,15 +525,28 @@ body.photo-marina #dockMap .gasText{
 
 body.home-mode #homeScreen{display:block}
 body.levels-mode #levelScreen{display:block}
+body.instructions-mode #instructionsScreen{display:block}
 body.home-mode #water, body.home-mode #controls,
 body.levels-mode #water, body.levels-mode #controls,
-body.home-mode #setupScreen, body.levels-mode #setupScreen{display:none}
-body.home-mode #app, body.levels-mode #app{
+body.instructions-mode #water, body.instructions-mode #controls,
+body.home-mode #setupScreen, body.levels-mode #setupScreen, body.instructions-mode #setupScreen{display:none}
+body.home-mode #app, body.levels-mode #app, body.instructions-mode #app{
   grid-template-columns:1fr;
   grid-template-rows:auto 1fr;
   min-height:100vh;
 }
-body.home-mode #homeScreen, body.levels-mode #levelScreen{overflow:auto}
+body.home-mode #homeScreen, body.levels-mode #levelScreen, body.instructions-mode #instructionsScreen{overflow:auto}
+.instructionsGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.instructionsCol{display:grid;gap:12px;align-content:start}
+.instructionCard .small{line-height:1.45}
+.instructionDemo button{pointer-events:none}
+.instructionsTopRow{display:flex;justify-content:space-between;gap:10px;align-items:center}
+@media(max-width:650px){
+  .modeGrid{grid-template-columns:1fr}
+  .modeButton{min-height:105px}
+  .instructionsGrid{grid-template-columns:1fr}
+}
+
 
 /* Destination highlighting lives inside worldLayer so it follows the camera. */
 #levelTargetLayer{
@@ -741,6 +755,59 @@ body.sim-mode{
         <strong>Play</strong>
         <span>Select a level with fixed conditions and a clear objective. Score is elapsed time plus impact penalties.</span>
       </button>
+      <button id="instructionsModeBtn" class="modeButton" type="button">
+        <strong>Instructions</strong>
+        <span>See the driving controls, docking lines, fenders, and bow thruster with explanations.</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="instructionsScreen">
+  <div class="gameShell">
+    <div class="card instructionsTopRow">
+      <div>
+        <div class="setupTitle">Instructions</div>
+        <div class="setupLead">The simulator controls are intentionally compact while driving. This page shows what each control does.</div>
+      </div>
+      <button id="instructionsHomeBtn" type="button">Home</button>
+    </div>
+    <div class="instructionsGrid">
+      <div class="instructionsCol">
+        <div class="card instructionCard">
+          <div class="label">Throttle / Shift</div>
+          <div class="instructionDemo throttles">
+            <div class="stack"><div class="small" style="text-align:center"><b>PORT</b></div><div class="enginePad"><button class="engineBtn ahead">25 FWD</button><button class="engineBtn ahead">10 FWD</button><button class="engineBtn reverse">10 REV</button><button class="engineBtn reverse">25 REV</button></div></div>
+            <div class="stack"><div class="small" style="text-align:center"><b>BOTH</b></div><div class="enginePad"><button class="engineBtn ahead">25 FWD</button><button class="engineBtn ahead">10 FWD</button><button class="engineBtn reverse">10 REV</button><button class="engineBtn reverse">25 REV</button></div></div>
+            <div class="stack"><div class="small" style="text-align:center"><b>STARBOARD</b></div><div class="enginePad"><button class="engineBtn ahead">25 FWD</button><button class="engineBtn ahead">10 FWD</button><button class="engineBtn reverse">10 REV</button><button class="engineBtn reverse">25 REV</button></div></div>
+          </div>
+          <div class="small" style="margin-top:8px">Press and hold for power; releasing returns the engine to neutral. 10% is approximately an idle docking pulse and 25% is a stronger burst. On twin-engine boats, the centre column operates both engines together. Single-engine boats use one engine column.</div>
+        </div>
+        <div class="card instructionCard">
+          <div class="label">Fenders</div>
+          <div class="instructionDemo row"><button>PORT FENDERS</button><button>STBD FENDERS</button></div>
+          <div class="small" style="margin-top:8px">Deploy either side independently. Fenders cushion side contact and let the hull slide or pivot along a dock with less impact.</div>
+        </div>
+      </div>
+      <div class="instructionsCol">
+        <div class="card instructionCard">
+          <div class="label">Steering</div>
+          <input type="range" min="-35" max="35" value="0" disabled>
+          <div class="instructionDemo row" style="margin-top:8px"><button>Full Port</button><button>Full Starboard</button></div>
+          <div class="instructionDemo"><button style="width:100%;margin-top:6px">Center Drives</button></div>
+          <div class="small" style="margin-top:8px">Use the slider for proportional steering, or the buttons for full lock and centre. Sterndrives vector thrust with steering; fixed-shaft inboards use rudders.</div>
+        </div>
+        <div class="card instructionCard">
+          <div class="label">Bow Thruster</div>
+          <div class="instructionDemo thrusterButtons"><button>← PORT</button><button>STARBOARD →</button></div>
+          <div class="small" style="margin-top:8px">Available only on equipped boats. Press and hold to push the bow sideways; release to stop.</div>
+        </div>
+        <div class="card instructionCard">
+          <div class="label">Docking Lines</div>
+          <div class="instructionDemo lineButtons"><button>Bow</button><button>For Spring</button><button>Aft Spring</button><button>Stern</button></div>
+          <div class="small" style="margin-top:8px">Tap a line button near a dock to attach or release it. Bow and stern lines restrain their respective ends; spring lines resist fore-and-aft movement and are useful for pivoting off a dock.</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -929,7 +996,7 @@ body.sim-mode{
             </div>
           </div>
           <div class="stack" id="stbdStack">
-            <div class="small" style="text-align:center" id="stbdLabel"><b>STARBOARD</b></div>
+            <div class="small" style="text-align:center" id="stbdLabel"><b>STBD</b></div>
             <div class="enginePad" data-engine="stbd">
               <button class="engineBtn ahead" data-power="25">25 FWD</button>
               <button class="engineBtn ahead" data-power="10">10 FWD</button>
@@ -938,26 +1005,14 @@ body.sim-mode{
             </div>
           </div>
         </div>
-        <div class="small" id="throttleHelp" style="margin-top:8px">Hold for power. Release = neutral. 10% approximates idle-ahead/idle-reverse; 25% is a stronger docking blip. The centre column controls both engines.</div>
       </div>
 
-      <div class="card">
-        <div class="label">Fenders</div>
-        <div class="row">
-          <button class="fenderToggle" id="portFenders">PORT FENDERS</button>
-          <button class="fenderToggle" id="stbdFenders">STBD FENDERS</button>
-        </div>
-        <div class="small" style="margin-top:7px">Deploy either side independently. Fenders cushion side contact while still allowing the boat to slide and pivot along a dock.</div>
-      </div>
-
-      <div class="card"><div class="tripleRow"><button id="reset">Reset</button><button id="approach">New Approach</button><button id="openSetup">Setup</button></div></div>
     </div>
 
     <div class="controlCol" id="controlColRight">
       <div class="card">
         <div class="label">Steering</div>
         <input id="steer" type="range" min="-35" max="35" value="0">
-        <div class="small">Port ← <span id="steerVal">0°</span> → Starboard</div>
         <div class="row" style="margin-top:8px">
           <button id="portLock">Full Port</button><button id="stbdLock">Full Starboard</button>
         </div>
@@ -970,23 +1025,28 @@ body.sim-mode{
           <button class="thrusterBtn" data-thruster="-1" type="button">← PORT</button>
           <button class="thrusterBtn" data-thruster="1" type="button">STARBOARD →</button>
         </div>
-        <div class="small" style="margin-top:7px">Momentary control. Hold to push the bow sideways; release to stop.</div>
       </div>
 
       <div class="card">
         <div class="label">Docking Lines</div>
         <div class="lineButtons">
           <button class="lineToggle" data-line="bow">Bow</button>
-          <button class="lineToggle" data-line="fwdSpring">Forward Spring</button>
+          <button class="lineToggle" data-line="fwdSpring">For Spring</button>
           <button class="lineToggle" data-line="aftSpring">Aft Spring</button>
           <button class="lineToggle" data-line="stern">Stern</button>
         </div>
-        <div class="small" style="margin-top:7px">
-          Tap near the dock to attach/release. Springs automatically lead in the appropriate direction.
+      </div>
+
+      <div class="card">
+        <div class="label">Fenders</div>
+        <div class="row">
+          <button class="fenderToggle" id="portFenders">PORT FENDERS</button>
+          <button class="fenderToggle" id="stbdFenders">STBD FENDERS</button>
         </div>
       </div>
     </div>
   </div>
+  <div class="card" id="controlActions"><div class="tripleRow"><button id="reset">Reset</button><button id="approach">New Approach</button><button id="openSetup">Setup</button></div></div>
 </div>
 </div>
 
@@ -1692,7 +1752,6 @@ body.sim-mode{
   const bothStack=document.getElementById('bothStack');
   const stbdStack=document.getElementById('stbdStack');
   const bothLabel=document.getElementById('bothLabel');
-  const throttleHelp=document.getElementById('throttleHelp');
   const thrustP=document.getElementById('thrustP');
   const thrustS=document.getElementById('thrustS');
   const startSimBtn=document.getElementById('startSim');
@@ -1862,7 +1921,7 @@ body.sim-mode{
   let hasStarted=false;
 
   function setScreenMode(mode){
-    document.body.classList.remove('home-mode','levels-mode','setup-mode','sim-mode');
+    document.body.classList.remove('home-mode','levels-mode','instructions-mode','setup-mode','sim-mode');
     document.body.classList.add(mode);
   }
 
@@ -1878,6 +1937,14 @@ body.sim-mode{
     hidePlayOverlays();
     setScreenMode('home-mode');
     status.textContent='Choose mode';
+  }
+
+  function showInstructions(){
+    levelRun.active=false;
+    levelRun.complete=false;
+    hidePlayOverlays();
+    setScreenMode('instructions-mode');
+    status.textContent='Instructions';
   }
 
   function showLevelSelect(){
@@ -1988,7 +2055,6 @@ body.sim-mode{
     v=Math.max(-maxSteer,Math.min(maxSteer,+v));
     state.steer=v;
     steer.value=v;
-    document.getElementById('steerVal').textContent=(v>0?'+':'')+v+'°';
 
     // The red drive graphics extend AFT from the transom.
     // Because the propulsive force on the boat acts in the opposite direction
@@ -2220,10 +2286,6 @@ body.sim-mode{
     document.querySelector('.throttles').style.gridTemplateColumns=
       single ? 'minmax(0,1fr)' : 'repeat(3,minmax(0,1fr))';
     bothLabel.innerHTML='<b>'+(single?'ENGINE':'BOTH')+'</b>';
-    throttleHelp.textContent = single
-      ? 'Hold for power. Release = neutral. These controls operate the single sterndrive engine. 10% approximates idle-ahead/idle-reverse; 25% is a stronger docking blip.'
-      : 'Hold for power. Release = neutral. 10% approximates idle-ahead/idle-reverse; 25% is a stronger docking blip. The centre column controls both engines.';
-
     if(bowThrusterCard){
       bowThrusterCard.style.display=activeBoat().propulsion.bowThruster?'block':'none';
     }
@@ -2631,6 +2693,8 @@ body.sim-mode{
     hasStarted=false;
     showLevelSelect();
   });
+  document.getElementById('instructionsModeBtn').addEventListener('click',showInstructions);
+  document.getElementById('instructionsHomeBtn').addEventListener('click',showHomeScreen);
   document.getElementById('levelsHomeBtn').addEventListener('click',showHomeScreen);
   document.getElementById('homeFromSetup').addEventListener('click',showHomeScreen);
   document.getElementById('retryLevelBtn').addEventListener('click',()=>{
